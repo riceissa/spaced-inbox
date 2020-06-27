@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 
 import re
+import os.path
 import sqlite3
 import hashlib
 
 
-# conn = sqlite3.connect('data.db')
-# c = conn.cursor()
+def main():
+    if not os.path.isfile("data.db"):
+        with open("data.db", "r") as f:
+            conn = sqlite3.connect('data.db')
+            c = conn.cursor()
+            c.executescript(f.read())
+    else:
+        conn = sqlite3.connect('data.db')
+        c = conn.cursor()
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -91,3 +99,7 @@ def print_due_notes():
 def initial_fragment(string, words=20):
     """Get the first `words` words from `string`, joining any linebreaks."""
     pass
+
+
+if __name__ == "__main__":
+    main()
