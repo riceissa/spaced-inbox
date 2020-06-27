@@ -20,7 +20,10 @@ def parse_inbox(string):
     state = "text"
     # This is a finite state machine with three states (text, 1 newline, 2+
     # newline) and three actions (text, blank, ===+).
+    line_number = 0
+    line_number_start = 1
     for line in string:
+        line_number += 1
         if state == "text":
             if not line:
                 state = "1 newline"
@@ -39,17 +42,25 @@ def parse_inbox(string):
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append(note)
-                note = line
+                result.append((note, line_number_start, line_number - 1))
+                line_number_start = line_number
+                note = line + "\n"
             # else: state remains the same
     if state != "2+ newline":
         # We ended the loop above without two newlines, so process what we have
-        result.append(note)
+        result.append((note, line_number_start, line_number))
     return result
 
 
 
     # return a list of tuples (sha1, fragment, line_number_start, line_number_end)
+
+
+def print_lines(string):
+    line_number = 0
+    for line in string.split("\n"):
+        line_number += 1
+        print(line_number, line)
 
 def update_notes_db(note_tuples, context_based_identity=True):
     """
