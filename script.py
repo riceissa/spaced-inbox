@@ -8,6 +8,9 @@ import hashlib
 # conn = sqlite3.connect('data.db')
 # c = conn.cursor()
 
+def sha1sum(string):
+    return hashlib.sha1(string.encode('utf-8')).hexdigest()
+
 
 def parse_inbox(string):
     """Parsing rules:
@@ -42,18 +45,14 @@ def parse_inbox(string):
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append((note, line_number_start, line_number - 1))
+                result.append((sha1sum(note.strip()), note, line_number_start, line_number - 1))
                 line_number_start = line_number
                 note = line + "\n"
             # else: state remains the same
     if state != "2+ newline":
         # We ended the loop above without two newlines, so process what we have
-        result.append((note, line_number_start, line_number))
+        result.append((sha1sum(note.strip()), note, line_number_start, line_number))
     return result
-
-
-
-    # return a list of tuples (sha1, fragment, line_number_start, line_number_end)
 
 
 def print_lines(string):
