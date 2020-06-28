@@ -125,7 +125,12 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     note_number = 0
     inbox_size = len(current_inbox)
     for (sha1, note, line_number_start, line_number_end) in current_inbox:
-        if sha1 not in db_hashes:
+        if sha1 in db_hashes:
+            # The note content is not new, but the position in the file may
+            # have changed, so update the line numbers
+            c.execute("""update notes set line_number_start = ?, line_number_end = ? where sha1sum = ?""",
+                      (line_number_start, line_number_end, sha1))
+        else:
             note_number += 1
             if initial_import:
                 interval = int(50 + 100/inbox_size * note_number)
