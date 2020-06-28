@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import re
 import os.path
 import sqlite3
@@ -8,13 +9,17 @@ import hashlib
 
 def main():
     if not os.path.isfile("data.db"):
-        with open("data.db", "r") as f:
+        with open("schema.sql", "r") as f:
             conn = sqlite3.connect('data.db')
             c = conn.cursor()
             c.executescript(f.read())
     else:
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
+
+    query = c.execute("""
+        select 
+    """)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -85,9 +90,13 @@ def update_notes_db(note_tuples, context_based_identity=True):
     note with hash 2222 was removed, and the note with hash 4444 was added,
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
-    # for (sha1, fragment, line_number_start, line_number_end) in note_tuples:
-    #     add to sqlite db
-    pass
+    db_hashes = set()
+    for (sha1, note, line_number_start, line_number_end) in note_tuples:
+        if sha1 not in db_hashes:
+            c.execute("""insert into notes
+                         (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on)
+                         values (?, ?, ?, ?, ?, ?, ?)""",
+                      (sha1, note, line_number_start, line_number_end, 250, 50, datetime.date.today()))
 
 
 def print_due_notes():
