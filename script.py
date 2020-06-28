@@ -19,12 +19,7 @@ def main():
 
     notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
-        # TODO: in parse_inbox we do string.split("\n") when looping over the
-        # lines in the file. This is kinda redundant/inefficient: we're joining
-        # lines together with f.read(), the splitting them again. We can
-        # instead just pass in f, then let parse_inbox loop over the lines in
-        # f.
-        current_inbox = parse_inbox(f.read())
+        current_inbox = parse_inbox(f)
 
     update_notes_db(conn, notes_db, current_inbox)
     items = due_notes(notes_db)
@@ -38,7 +33,7 @@ def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
 
 
-def parse_inbox(string):
+def parse_inbox(lines):
     """Parsing rules:
     - two or more blank lines in a row start a new note
     - a line with three or more equals signs and nothing else starts a new note
@@ -51,7 +46,7 @@ def parse_inbox(string):
     # newline) and three actions (text, blank, ===+).
     line_number = 0
     line_number_start = 1
-    for line in string.split("\n"):
+    for line in lines:
         line_number += 1
         if state == "text":
             if not line:
