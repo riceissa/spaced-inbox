@@ -113,8 +113,9 @@ def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False)
 
 def print_due_notes(notes_db):
     for (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on) in notes_db:
-        if datetime.datetime.strptime(last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=interval) < datetime.date.today():
-            print("* [%s, %s] %s - " % (line_number_start, line_number_end, initial_fragment(note_text)))
+        due_date = datetime.datetime.strptime(last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=interval)
+        if datetime.date.today() > due_date:
+            print("* %s-%s: %s - " % (line_number_start, line_number_end, initial_fragment(note_text)))
 
 
 def initial_fragment(string, words=20):
