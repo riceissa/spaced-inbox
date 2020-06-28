@@ -98,7 +98,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     If initial_import is true, then import as if a large number of notes are
     being added at once (such as the first time a notes file is imported). This
     tries to even out the review load so that you don't have like 100 notes to
-    review in 50 days (the default initial interval after importing).
+    review on the 50th day (the default initial interval after importing).
     Specifically, distribute the cards uniformly between days 50 and 150. e.g.
     if you have 300 cards, then this will mean 3 cards per day on days 50-150
     from the day you import (assuming you don't import any more cards in that
