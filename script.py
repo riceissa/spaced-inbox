@@ -132,7 +132,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
         else:
             note_number += 1
             if initial_import:
-                interval = int(50 + 100/inbox_size * note_number)
+                interval = int(50 + min(1, 100/inbox_size) * note_number)
             else:
                 interval = 50
             c.execute("""insert into notes
