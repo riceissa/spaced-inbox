@@ -102,7 +102,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     Specifically, distribute the cards uniformly between days 50 and 150. e.g.
     if you have 300 cards, then this will mean 3 cards per day on days 50-150
     from the day you import (assuming you don't import any more cards in that
-    time period).
+    time period), rather than suddenly getting 300 cards on day 50.
 
     If context_based_identity is true, then identify notes using the
     surrounding context, even if the hashes do not match. For example, if the
