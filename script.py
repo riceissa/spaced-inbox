@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import datetime
 import re
 import os.path
@@ -8,6 +9,9 @@ import hashlib
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--initial_import", help="Uniformly distribute new notes between days 50-150 rather than having everything due on day 50", action="store_true")
+    args = parser.parse_args()
     if not os.path.isfile("data.db"):
         with open("schema.sql", "r") as f:
             conn = sqlite3.connect('data.db')
@@ -21,7 +25,7 @@ def main():
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
 
-    update_notes_db(conn, notes_db, current_inbox)
+    update_notes_db(conn, notes_db, current_inbox, initial_import=args.initial_import)
     items = due_notes(notes_db)
     print_due_notes(items)
     if len(items) == 0:
