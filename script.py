@@ -148,7 +148,7 @@ def due_notes(notes_db):
 
 def print_due_notes(items):
     item_number = 0
-    for (_, line_number_start, line_number_end, fragment, _, interval, _) in items:
+    for (_, line_number_start, line_number_end, fragment, ease_factor, interval, _) in items:
         item_number += 1
         print("%s. L%s-%s [good: %s, again: %s] %s" % (item_number, line_number_start, line_number_end, human_friendly_time(int(interval * ease_factor/100)), human_friendly_time(int(interval * 0.90)), fragment))
 
