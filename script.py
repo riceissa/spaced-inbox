@@ -133,7 +133,7 @@ def print_due_notes(items):
 
 def interact_loop(items, conn):
     while True:
-        command = input("Enter a command (e.g. '1 good', 'quit'): ")
+        command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
         if command.strip() == "quit":
             break
         xs = command.strip().split()
@@ -145,6 +145,11 @@ def interact_loop(items, conn):
             c = conn.cursor()
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
                       (int(interval * ease_factor/100), datetime.date.today(), sha1sum))
+            conn.commit()
+        if item_action == "again":
+            c = conn.cursor()
+            c.execute("update notes set interval = ?, last_reviewed_on = ?, ease_factor = ? where sha1sum = ?",
+                      (int(interval * 0.90), datetime.date.today(), int(max(130, ease_factor - 20)), sha1sum))
             conn.commit()
 
 
