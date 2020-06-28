@@ -6,7 +6,7 @@ create table notes (
         note_text text,
         line_number_start integer,
         line_number_end integer,
-        ease_factor integer,  # as a percentage, defaults to 250% like in Anki
-        interval integer,  # in days
+        ease_factor integer,  /* as a percentage, defaults to 250% like in Anki */
+        interval integer,  /* in days */
         last_reviewed_on date
 );
