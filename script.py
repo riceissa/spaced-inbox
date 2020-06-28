@@ -27,6 +27,7 @@ def main():
         current_inbox = parse_inbox(f.read())
 
     update_notes_db(conn, notes_db, current_inbox)
+    print_due_notes(notes_db)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -112,13 +113,13 @@ def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False)
 
 def print_due_notes(notes_db):
     for (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on) in notes_db:
-        if last_reviewed_on + datetime.timedelta(days=interval) > datetime.date.today():
+        if datetime.datetime.strptime(last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=interval) < datetime.date.today():
             print("* [%s, %s] %s - " % (line_number_start, line_number_end, initial_fragment(note_text)))
 
 
 def initial_fragment(string, words=20):
     """Get the first `words` words from `string`, joining any linebreaks."""
-    pass
+    return " ".join(string.split()[:words])
 
 
 if __name__ == "__main__":
