@@ -4,6 +4,7 @@ import argparse
 import datetime
 import re
 import os.path
+import sys
 import sqlite3
 import hashlib
 
@@ -22,10 +23,12 @@ def main():
         c = conn.cursor()
 
     notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
+    print("Importing new notes...", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
 
     update_notes_db(conn, notes_db, current_inbox, initial_import=args.initial_import)
+    print("done.", file=sys.stderr)
     items = due_notes(notes_db)
     print_due_notes(items)
     if len(items) == 0:
