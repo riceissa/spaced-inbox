@@ -29,7 +29,10 @@ def main():
     update_notes_db(conn, notes_db, current_inbox)
     items = due_notes(notes_db)
     print_due_notes(items)
-    interact_loop(items, conn)
+    if len(items) == 0:
+        print("No items are due")
+    else:
+        interact_loop(items, conn)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -135,12 +138,14 @@ def interact_loop(items, conn):
             break
         xs = command.strip().split()
         item_number = int(xs[0])
+        print("DEBUG:", items[item_number-1])
         (sha1sum, _, _, _, ease_factor, interval, _) = items[item_number-1]
         item_action = xs[1]
         if item_action == "good":
             c = conn.cursor()
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
                       (int(interval * ease_factor/100), datetime.date.today(), sha1sum))
+            conn.commit()
 
 
 
