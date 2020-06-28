@@ -29,7 +29,7 @@ def main():
         current_inbox = parse_inbox(f)
 
     update_notes_db(conn, notes_db, current_inbox, initial_import=args.initial_import)
-    print("done. ", file=sys.stderr)
+    print("done.", file=sys.stderr)
 
     if not args.no_review:
         items = due_notes(notes_db)
@@ -141,7 +141,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
                          values (?, ?, ?, ?, ?, ?, ?)""",
                       (sha1, note, line_number_start, line_number_end, 250, interval, datetime.date.today()))
     conn.commit()
-    print("%s new notes imported.", file=sys.stderr)
+    print("%s new notes found..." % (note_number,), file=sys.stderr)
 
 
 def due_notes(notes_db):
