@@ -85,11 +85,20 @@ def print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False):
+def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context_based_identity=False):
     """
 
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
+
+    If initial_import is true, then import as if a large number of notes are
+    being added at once (such as the first time a notes file is imported). This
+    tries to even out the review load so that you don't have like 100 notes to
+    review in 50 days (the default initial interval after importing).
+    Specifically, distribute the cards uniformly between days 50 and 150. e.g.
+    if you have 300 cards, then this will mean 3 cards per day on days 50-150
+    from the day you import (assuming you don't import any more cards in that
+    time period).
 
     If context_based_identity is true, then identify notes using the
     surrounding context, even if the hashes do not match. For example, if the
@@ -103,12 +112,19 @@ def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False)
     scheduling the note review."""
     c = conn.cursor()
     db_hashes = set([sha1sum for (sha1sum, _, _, _, _, _, _) in notes_db])
+    note_number = 0
+    inbox_size = len(current_inbox)
     for (sha1, note, line_number_start, line_number_end) in current_inbox:
         if sha1 not in db_hashes:
+            note_number += 1
+            if initial_import:
+                interval = int(50 + 100/inbox_size * note_number)
+            else:
+                interval = 50
             c.execute("""insert into notes
                          (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on)
                          values (?, ?, ?, ?, ?, ?, ?)""",
-                      (sha1, note, line_number_start, line_number_end, 250, 50, datetime.date.today()))
+                      (sha1, note, line_number_start, line_number_end, 250, interval, datetime.date.today()))
     conn.commit()
 
 
