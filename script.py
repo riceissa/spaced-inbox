@@ -27,7 +27,9 @@ def main():
         current_inbox = parse_inbox(f.read())
 
     update_notes_db(conn, notes_db, current_inbox)
-    print_due_notes(due_notes(notes_db))
+    items = due_notes(notes_db)
+    print_due_notes(items)
+    interact_loop(items, conn)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -112,18 +114,35 @@ def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False)
 
 
 def due_notes(notes_db):
-    item_number = 0
     items = []
     for (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on) in notes_db:
         due_date = datetime.datetime.strptime(last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=interval)
         if datetime.date.today() > due_date:
-            item_number += 1
-            items.append((item_number, sha1sum, line_number_start, line_number_end, initial_fragment(note_text)))
+            items.append((sha1sum, line_number_start, line_number_end, initial_fragment(note_text), ease_factor, interval, last_reviewed_on))
     return items
 
 def print_due_notes(items):
-    for (item_number, _, line_number_start, line_number_end, fragment) in items:
-            print("%s. L%s-%s %s" % (item_number, line_number_start, line_number_end, fragment))
+    item_number = 0
+    for (_, line_number_start, line_number_end, fragment, _, _, _) in items:
+        item_number += 1
+        print("%s. L%s-%s %s" % (item_number, line_number_start, line_number_end, fragment))
+
+
+def interact_loop(items, conn):
+    while True:
+        command = input("Enter a command (e.g. '1 good', 'quit'): ")
+        if command.strip() == "quit":
+            break
+        xs = command.strip().split()
+        item_number = int(xs[0])
+        (sha1sum, _, _, _, ease_factor, interval, _) = items[item_number-1]
+        item_action = xs[1]
+        if item_action == "good":
+            c = conn.cursor()
+            c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
+                      (int(interval * ease_factor/100), datetime.date.today(), sha1sum))
+
+
 
 def initial_fragment(string, words=20):
     """Get the first `words` words from `string`, joining any linebreaks."""
