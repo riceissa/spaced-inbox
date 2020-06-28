@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import pdb
-
 import datetime
 import re
 import os.path
@@ -21,7 +19,6 @@ def main():
 
     notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
-        pdb.set_trace()
         current_inbox = parse_inbox(f.read())
 
     update_notes_db(conn, notes_db, current_inbox)
@@ -43,7 +40,7 @@ def parse_inbox(string):
     # newline) and three actions (text, blank, ===+).
     line_number = 0
     line_number_start = 1
-    for line in string:
+    for line in string.split("\n"):
         line_number += 1
         if state == "text":
             if not line:
@@ -70,7 +67,6 @@ def parse_inbox(string):
     if state != "2+ newline":
         # We ended the loop above without two newlines, so process what we have
         result.append((sha1sum(note.strip()), note, line_number_start, line_number))
-    pdb.set_trace()
     return result
 
 
