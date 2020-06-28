@@ -148,9 +148,9 @@ def due_notes(notes_db):
 
 def print_due_notes(items):
     item_number = 0
-    for (_, line_number_start, line_number_end, fragment, _, _, _) in items:
+    for (_, line_number_start, line_number_end, fragment, _, interval, _) in items:
         item_number += 1
-        print("%s. L%s-%s %s" % (item_number, line_number_start, line_number_end, fragment))
+        print("%s. L%s-%s [good: %s, again: %s] %s" % (item_number, line_number_start, line_number_end, human_friendly_time(int(interval * ease_factor/100)), human_friendly_time(int(interval * 0.90)), fragment))
 
 
 def interact_loop(items, conn):
@@ -164,13 +164,17 @@ def interact_loop(items, conn):
         item_action = xs[1]
         if item_action == "good":
             c = conn.cursor()
+            new_interval = int(interval * ease_factor/100)
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
-                      (int(interval * ease_factor/100), datetime.date.today(), sha1sum))
+                      (new_interval, datetime.date.today(), sha1sum))
             conn.commit()
+            print("You will next see this note in " + human_friendly_time(new_interval), file=sys.stderr)
         if item_action == "again":
             c = conn.cursor()
+            new_interval = int(interval * 0.90)
             c.execute("update notes set interval = ?, last_reviewed_on = ?, ease_factor = ? where sha1sum = ?",
-                      (int(interval * 0.90), datetime.date.today(), int(max(130, ease_factor - 20)), sha1sum))
+                      (new_interval, datetime.date.today(), int(max(130, ease_factor - 20)), sha1sum))
+            print("You will next see this note in " + human_friendly_time(new_interval), file=sys.stderr)
             conn.commit()
 
 
@@ -178,6 +182,18 @@ def interact_loop(items, conn):
 def initial_fragment(string, words=20):
     """Get the first `words` words from `string`, joining any linebreaks."""
     return " ".join(string.split()[:words])
+
+def human_friendly_time(days):
+    if not days:
+        return days
+    if days < 1:
+        return str(round(days * 24 * 60, 2)) + " minutes"
+    elif days < 30:
+        return str(round(days, 2)) + " days"
+    elif days < 365:
+        return str(round(days / (365.25 / 12), 2)) + " months"
+    else:
+        return str(round(days / 365.25, 2)) + " years"
 
 
 if __name__ == "__main__":
