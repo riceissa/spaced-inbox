@@ -24,7 +24,7 @@ def main():
         c = conn.cursor()
 
     notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
-    print("Importing new notes...", file=sys.stderr, end="")
+    print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
 
@@ -141,7 +141,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
                          values (?, ?, ?, ?, ?, ?, ?)""",
                       (sha1, note, line_number_start, line_number_end, 250, interval, datetime.date.today()))
     conn.commit()
-    print("%s new notes found..." % (note_number,), file=sys.stderr)
+    print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
 
 def due_notes(notes_db):
