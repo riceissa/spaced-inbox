@@ -81,9 +81,8 @@ def parse_inbox(lines):
                 line_number_start = line_number
                 note = line + "\n"
             # else: state remains the same
-    if state != "2+ newline":
-        # We ended the loop above without two newlines, so process what we have
-        result.append((sha1sum(note.strip()), note, line_number_start, line_number))
+    # We ended the loop above without adding the final note, so add it now
+    result.append((sha1sum(note.strip()), note, line_number_start, line_number))
     return result
 
 
