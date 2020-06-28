@@ -138,7 +138,6 @@ def interact_loop(items, conn):
             break
         xs = command.strip().split()
         item_number = int(xs[0])
-        print("DEBUG:", items[item_number-1])
         (sha1sum, _, _, _, ease_factor, interval, _) = items[item_number-1]
         item_action = xs[1]
         if item_action == "good":
