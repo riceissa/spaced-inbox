@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import pdb
+
 import datetime
 import re
 import os.path
@@ -17,9 +19,12 @@ def main():
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
 
-    query = c.execute("""
-        select 
-    """)
+    notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
+    with open("/home/issa/projects/notes/inbox.txt", "r") as f:
+        pdb.set_trace()
+        current_inbox = parse_inbox(f.read())
+
+    update_notes_db(conn, notes_db, current_inbox)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -65,20 +70,23 @@ def parse_inbox(string):
     if state != "2+ newline":
         # We ended the loop above without two newlines, so process what we have
         result.append((sha1sum(note.strip()), note, line_number_start, line_number))
+    pdb.set_trace()
     return result
 
 
 def print_lines(string):
+    """Print a string with line numbers (for debugging parse_inbox)."""
     line_number = 0
     for line in string.split("\n"):
         line_number += 1
         print(line_number, line)
 
-def update_notes_db(note_tuples, context_based_identity=True):
+
+def update_notes_db(conn, notes_db, current_inbox, context_based_identity=False):
     """
 
     Add new notes to db.
-    Remove notes from db if they no longer exist in the notes file.
+    Remove notes from db if they no longer exist in the notes file?
 
     If context_based_identity is true, then identify notes using the
     surrounding context, even if the hashes do not match. For example, if the
@@ -90,19 +98,21 @@ def update_notes_db(note_tuples, context_based_identity=True):
     note with hash 2222 was removed, and the note with hash 4444 was added,
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
-    db_hashes = set()
-    for (sha1, note, line_number_start, line_number_end) in note_tuples:
+    c = conn.cursor()
+    db_hashes = set([sha1sum for (sha1sum, _, _, _, _, _, _) in notes_db])
+    for (sha1, note, line_number_start, line_number_end) in current_inbox:
         if sha1 not in db_hashes:
             c.execute("""insert into notes
                          (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on)
                          values (?, ?, ?, ?, ?, ?, ?)""",
                       (sha1, note, line_number_start, line_number_end, 250, 50, datetime.date.today()))
+    conn.commit()
 
 
-def print_due_notes():
-    # for note in [query from sqlite db]:
-    #     a
-    pass
+def print_due_notes(notes_db):
+    for (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on) in notes_db:
+        if last_reviewed_on + datetime.timedelta(days=interval) > datetime.date.today():
+            print("* [%s, %s] %s - " % (line_number_start, line_number_end, initial_fragment(note_text)))
 
 
 def initial_fragment(string, words=20):
