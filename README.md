@@ -8,7 +8,7 @@ Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.or
 
 That's it! There's no app or writing interface: you get to choose your favorite text editor, and write in whatever markup language you prefer.
 
-The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50*2.5 = 125 days, 125*2.5 = 313 days, and so on.
+The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days, 125\*2.5 = 313 days, and so on.
 
 ## TODO
 
