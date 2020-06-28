@@ -46,7 +46,8 @@ def parse_inbox(lines):
     # newline) and three actions (text, blank, ===+).
     line_number = 0
     line_number_start = 1
-    for line in lines:
+    for raw_line in lines:
+        line = raw_line.strip()
         line_number += 1
         if state == "text":
             if not line:
