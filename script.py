@@ -12,6 +12,7 @@ import hashlib
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--initial_import", help="Uniformly distribute new notes between days 50-150 rather than having everything due on day 50", action="store_true")
+    parser.add_argument("--no_review", help="Just import new notes, without printing due notes or going into the review interact loop", action="store_true")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
         with open("schema.sql", "r") as f:
@@ -29,12 +30,14 @@ def main():
 
     update_notes_db(conn, notes_db, current_inbox, initial_import=args.initial_import)
     print("done.", file=sys.stderr)
-    items = due_notes(notes_db)
-    print_due_notes(items)
-    if len(items) == 0:
-        print("No items are due")
-    else:
-        interact_loop(items, conn)
+
+    if not args.no_review:
+        items = due_notes(notes_db)
+        print_due_notes(items)
+        if len(items) == 0:
+            print("No items are due")
+        else:
+            interact_loop(items, conn)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
