@@ -41,12 +41,12 @@ def main():
     print("done.", file=sys.stderr)
 
     if not args.no_review:
-        items = due_notes(notes_db)
-        print_due_notes(items)
-        if len(items) == 0:
-            print("No items are due")
+        notes = due_notes(notes_db)
+        print_due_notes(notes)
+        if len(notes) == 0:
+            print("No notes are due")
         else:
-            interact_loop(items, conn)
+            interact_loop(notes, conn)
 
 def sha1sum(string):
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
@@ -161,8 +161,8 @@ def due_notes(notes_db):
             result.append(note)
     return result
 
-def print_due_notes(items):
-    for i, note in enumerate(items):
+def print_due_notes(notes):
+    for i, note in enumerate(notes):
         print("%s. L%s-%s [good: %s, again: %s] %s"
               % (i+1, note.line_number_start, note.line_number_end,
                  human_friendly_time(int(note.interval * note.ease_factor/100)),
@@ -170,31 +170,31 @@ def print_due_notes(items):
                  initial_fragment(note.note_text)))
 
 
-def interact_loop(items, conn):
+def interact_loop(notes, conn):
     while True:
         command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
         if command.strip() == "quit":
             break
         xs = command.strip().split()
-        item_number = int(xs[0])
-        item = items[item_number-1]
-        item_action = xs[1]
-        if item_action == "good":
+        note_number = int(xs[0])
+        note = notes[note_number-1]
+        action = xs[1]
+        if action == "good":
             c = conn.cursor()
-            new_interval = int(item.interval * item.ease_factor/100)
+            new_interval = int(note.interval * note.ease_factor/100)
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
-                      (new_interval, datetime.date.today(), item.sha1sum))
+                      (new_interval, datetime.date.today(), note.sha1sum))
             conn.commit()
             print("You will next see this note in " + human_friendly_time(new_interval),
                   file=sys.stderr)
-        if item_action == "again":
+        if action == "again":
             c = conn.cursor()
-            new_interval = int(item.interval * 0.90)
+            new_interval = int(note.interval * 0.90)
             c.execute("""update notes
                          set interval = ?, last_reviewed_on = ?, ease_factor = ?
                          where sha1sum = ?""",
                       (new_interval, datetime.date.today(),
-                       int(max(130, item.ease_factor - 20)), item.sha1sum))
+                       int(max(130, note.ease_factor - 20)), note.sha1sum))
             print("You will next see this note in " + human_friendly_time(new_interval),
                   file=sys.stderr)
             conn.commit()
