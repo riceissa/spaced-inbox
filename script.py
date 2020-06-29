@@ -60,7 +60,7 @@ def parse_inbox(lines):
 
     """
     result = []
-    note = ""
+    note_text = ""
     state = "text"
     # This is a finite state machine with three states (text, 1 newline, 2+
     # newline) and three actions (text, blank, ===+).
@@ -76,23 +76,23 @@ def parse_inbox(lines):
                 state = "2+ newline"
             else:
                 # state remains the same
-                note += line + "\n"
+                note_text += line + "\n"
         elif state == "1 newline":
             if (not line) or re.match("===+$", line):
                 state = "2+ newline"
             else:
                 state = "text"
-                note += "\n" + line + "\n"
+                note_text += "\n" + line + "\n"
         else:
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append((sha1sum(note.strip()), note, line_number_start, line_number - 1))
+                result.append((sha1sum(note_text.strip()), note_text, line_number_start, line_number - 1))
                 line_number_start = line_number
-                note = line + "\n"
+                note_text = line + "\n"
             # else: state remains the same
     # We ended the loop above without adding the final note, so add it now
-    result.append((sha1sum(note.strip()), note, line_number_start, line_number))
+    result.append((sha1sum(note_text.strip()), note_text, line_number_start, line_number))
     return result
 
 
