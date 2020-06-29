@@ -128,20 +128,30 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     note with hash 2222 was removed, and the note with hash 4444 was added,
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
-    # TODO: if a note is deleted from the inbox, imported, deleted from the
-    # inbox, then readded to the inbox, I think it stays soft-deleted in the
-    # db. So we have to check if it's soft-deleted in addition to checking if
-    # it's in the db.
     c = conn.cursor()
-    db_hashes = set(note.sha1sum for note in notes_db)
+    db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
     inbox_size = len(current_inbox)
     for (sha1sum, note_text, line_number_start, line_number_end) in current_inbox:
-        if sha1sum in db_hashes:
+        if sha1sum in db_hashes and db_hashes[sha1sum].interval >= 0:
             # The note content is not new, but the position in the file may
             # have changed, so update the line numbers
-            c.execute("""update notes set line_number_start = ?, line_number_end = ? where sha1sum = ?""",
+            c.execute("""update notes set line_number_start = ?,
+                                          line_number_end = ?
+                         where sha1sum = ?""",
                       (line_number_start, line_number_end, sha1sum))
+        elif sha1sum in db_hashes:
+            # The note content is not new but the same note content was
+            # previously added and then soft-deleted from the db, so we want to
+            # reset the review schedule.
+            c.execute("""update notes set line_number_start = ?,
+                                          line_number_end = ?,
+                                          ease_factor = ?,
+                                          interval = ?,
+                                          last_reviewed_on = ?
+                         where sha1sum = ?""",
+                      (line_number_start, line_number_end, 250, 50,
+                       datetime.date.today(), sha1sum))
         else:
             note_number += 1
             if initial_import:
