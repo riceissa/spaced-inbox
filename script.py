@@ -16,8 +16,12 @@ Note = namedtuple('Note', DB_COLUMNS)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--initial_import", help="Uniformly distribute new notes between days 50-150 rather than having everything due on day 50", action="store_true")
-    parser.add_argument("--no_review", help="Just import new notes, without printing due notes or going into the review interact loop", action="store_true")
+    parser.add_argument("--initial_import",
+                        help="Uniformly distribute new notes between days 50-150 rather than having everything due on day 50",
+                        action="store_true")
+    parser.add_argument("--no_review",
+                        help="Just import new notes, without printing due notes or going into the review interact loop",
+                        action="store_true")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
         with open("schema.sql", "r") as f:
