@@ -9,6 +9,7 @@ import sqlite3
 import hashlib
 from collections import namedtuple
 
+
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
 Note = namedtuple('Note', DB_COLUMNS)
@@ -48,9 +49,6 @@ def main():
             print("No notes are due")
         else:
             interact_loop(notes, conn)
-
-def sha1sum(string):
-    return hashlib.sha1(string.encode('utf-8')).hexdigest()
 
 
 def parse_inbox(lines):
@@ -108,7 +106,6 @@ def _print_lines(string):
 
 def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context_based_identity=False):
     """
-
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
 
@@ -164,6 +161,7 @@ def due_notes(notes_db):
             result.append(note)
     return result
 
+
 def print_due_notes(notes):
     for i, note in enumerate(notes):
         print("%s. L%s-%s [good: %s, again: %s] %s"
@@ -171,6 +169,7 @@ def print_due_notes(notes):
                  human_friendly_time(good_interval(note.interval, note.ease_factor)),
                  human_friendly_time(again_interval(note.interval)),
                  initial_fragment(note.note_text)))
+
 
 def interact_loop(notes, conn):
     while True:
@@ -200,6 +199,10 @@ def interact_loop(notes, conn):
             print("You will next see this note in " + human_friendly_time(new_interval),
                   file=sys.stderr)
             conn.commit()
+
+
+def sha1sum(string):
+    return hashlib.sha1(string.encode('utf-8')).hexdigest()
 
 
 def initial_fragment(string, words=20):
