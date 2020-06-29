@@ -168,10 +168,9 @@ def print_due_notes(notes):
     for i, note in enumerate(notes):
         print("%s. L%s-%s [good: %s, again: %s] %s"
               % (i+1, note.line_number_start, note.line_number_end,
-                 human_friendly_time(int(note.interval * note.ease_factor/100)),
-                 human_friendly_time(int(note.interval * 0.90)),
+                 human_friendly_time(good_interval(note.interval, note.ease_factor)),
+                 human_friendly_time(again_interval(note.interval)),
                  initial_fragment(note.note_text)))
-
 
 def interact_loop(notes, conn):
     while True:
@@ -184,7 +183,7 @@ def interact_loop(notes, conn):
         action = xs[1]
         if action == "good":
             c = conn.cursor()
-            new_interval = int(note.interval * note.ease_factor/100)
+            new_interval = good_interval(note.interval, note.ease_factor)
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
                       (new_interval, datetime.date.today(), note.sha1sum))
             conn.commit()
@@ -192,7 +191,7 @@ def interact_loop(notes, conn):
                   file=sys.stderr)
         if action == "again":
             c = conn.cursor()
-            new_interval = int(note.interval * 0.90)
+            new_interval = again_interval(note.interval)
             c.execute("""update notes
                          set interval = ?, last_reviewed_on = ?, ease_factor = ?
                          where sha1sum = ?""",
@@ -203,10 +202,18 @@ def interact_loop(notes, conn):
             conn.commit()
 
 
-
 def initial_fragment(string, words=20):
     """Get the first `words` words from `string`, joining any linebreaks."""
     return " ".join(string.split()[:words])
+
+
+def good_interval(interval, ease_factor):
+    return int(interval * ease_factor/100)
+
+
+def again_interval(interval):
+    return int(interval * 0.90)
+
 
 def human_friendly_time(days):
     if not days:
