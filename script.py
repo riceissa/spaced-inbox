@@ -87,12 +87,14 @@ def parse_inbox(lines):
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append((sha1sum(note_text.strip()), note_text, line_number_start, line_number - 1))
+                result.append((sha1sum(note_text.strip()), note_text,
+                               line_number_start, line_number - 1))
                 line_number_start = line_number
                 note_text = line + "\n"
             # else: state remains the same
     # We ended the loop above without adding the final note, so add it now
-    result.append((sha1sum(note_text.strip()), note_text, line_number_start, line_number))
+    result.append((sha1sum(note_text.strip()), note_text,
+                   line_number_start, line_number))
     return result
 
 
