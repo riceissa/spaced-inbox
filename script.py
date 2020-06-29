@@ -271,9 +271,9 @@ def again_interval(interval):
 
 
 def human_friendly_time(days):
-    if not days:
-        return days
-    if days * 24 * 60 < 1:
+    if days < 0:
+        return "-" + human_friendly_time(abs(days))
+    elif days * 24 * 60 < 1:
         return str(round(days * 24 * 60 * 60, 2)) + " seconds"
     elif days * 24 < 1:
         return str(round(days * 24 * 60, 2)) + " minutes"
