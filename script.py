@@ -144,8 +144,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
                 interval = int(50 + min(1, 100/inbox_size) * note_number)
             else:
                 interval = 50
-            c.execute("insert into notes (%s) values (?, ?, ?, ?, ?, ?, ?)"
-                      % (", ".join(DB_COLUMNS),),
+            c.execute("insert into notes (%s) values (%s)"
+                      % (", ".join(DB_COLUMNS), ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
                            line_number_end, ease_factor=250, interval=interval,
                            last_reviewed_on=datetime.date.today()))
