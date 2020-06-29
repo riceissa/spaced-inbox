@@ -128,6 +128,10 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     note with hash 2222 was removed, and the note with hash 4444 was added,
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
+    # TODO: if a note is deleted from the inbox, imported, deleted from the
+    # inbox, then readded to the inbox, I think it stays soft-deleted in the
+    # db. So we have to check if it's soft-deleted in addition to checking if
+    # it's in the db.
     c = conn.cursor()
     db_hashes = set(note.sha1sum for note in notes_db)
     note_number = 0
