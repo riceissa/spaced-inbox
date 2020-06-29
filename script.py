@@ -188,10 +188,16 @@ def print_due_notes(notes):
 def interact_loop(notes, conn):
     while True:
         command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
+        if not re.match(r"\d+ (good|again)|quit", command):
+            print("Not a valid command", file=sys.stderr)
+            continue
         if command.strip() == "quit":
             break
         xs = command.strip().split()
         note_number = int(xs[0])
+        if note_number not in [i+1 for i in range(len(notes))]:
+            print("Not a valid note number", file=sys.stderr)
+            continue
         note = notes[note_number-1]
         action = xs[1]
         if action == "good":
