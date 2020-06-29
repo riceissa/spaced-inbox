@@ -7,6 +7,12 @@ import os.path
 import sys
 import sqlite3
 import hashlib
+from collections import namedtuple
+
+
+Note = namedtuple('Note', ['sha1sum', 'note_text', 'line_number_start',
+                           'line_number_end', 'ease_factor', 'interval',
+                           'last_reviewed_on'])
 
 
 def main():
@@ -23,7 +29,11 @@ def main():
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
 
-    notes_db  = c.execute("""select sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on from notes""").fetchall()
+    notes_db  = [Note(*row) for row in
+                 c.execute("""select
+                                  sha1sum, note_text, line_number_start, line_number_end,
+                                  ease_factor, interval, last_reviewed_on
+                              from notes""").fetchall()]
     print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
@@ -120,15 +130,15 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
     c = conn.cursor()
-    db_hashes = set([sha1sum for (sha1sum, _, _, _, _, _, _) in notes_db])
+    db_hashes = set([note.sha1sum for note in notes_db])
     note_number = 0
     inbox_size = len(current_inbox)
-    for (sha1, note, line_number_start, line_number_end) in current_inbox:
-        if sha1 in db_hashes:
+    for (sha1sum, note_text, line_number_start, line_number_end) in current_inbox:
+        if sha1sum in db_hashes:
             # The note content is not new, but the position in the file may
             # have changed, so update the line numbers
             c.execute("""update notes set line_number_start = ?, line_number_end = ? where sha1sum = ?""",
-                      (line_number_start, line_number_end, sha1))
+                      (line_number_start, line_number_end, sha1sum))
         else:
             note_number += 1
             if initial_import:
@@ -138,24 +148,26 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
             c.execute("""insert into notes
                          (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on)
                          values (?, ?, ?, ?, ?, ?, ?)""",
-                      (sha1, note, line_number_start, line_number_end, 250, interval, datetime.date.today()))
+                      (sha1sum, note_text, line_number_start, line_number_end, 250, interval, datetime.date.today()))
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
 
 def due_notes(notes_db):
-    items = []
-    for (sha1sum, note_text, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on) in notes_db:
-        due_date = datetime.datetime.strptime(last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=interval)
+    result = []
+    for note in notes_db:
+        due_date = datetime.datetime.strptime(note.last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=note.interval)
         if datetime.date.today() > due_date:
-            items.append((sha1sum, line_number_start, line_number_end, initial_fragment(note_text), ease_factor, interval, last_reviewed_on))
-    return items
+            result.append(note)
+    return result
 
 def print_due_notes(items):
-    item_number = 0
-    for (_, line_number_start, line_number_end, fragment, ease_factor, interval, _) in items:
-        item_number += 1
-        print("%s. L%s-%s [good: %s, again: %s] %s" % (item_number, line_number_start, line_number_end, human_friendly_time(int(interval * ease_factor/100)), human_friendly_time(int(interval * 0.90)), fragment))
+    for i, note in enumerate(items):
+        print("%s. L%s-%s [good: %s, again: %s] %s"
+              % (i+1, note.line_number_start, note.line_number_end,
+                 human_friendly_time(int(note.interval * note.ease_factor/100)),
+                 human_friendly_time(int(note.interval * 0.90)),
+                 initial_fragment(note.note_text)))
 
 
 def interact_loop(items, conn):
@@ -165,21 +177,26 @@ def interact_loop(items, conn):
             break
         xs = command.strip().split()
         item_number = int(xs[0])
-        (sha1sum, _, _, _, ease_factor, interval, _) = items[item_number-1]
+        item = items[item_number-1]
         item_action = xs[1]
         if item_action == "good":
             c = conn.cursor()
-            new_interval = int(interval * ease_factor/100)
+            new_interval = int(item.interval * item.ease_factor/100)
             c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
-                      (new_interval, datetime.date.today(), sha1sum))
+                      (new_interval, datetime.date.today(), item.sha1sum))
             conn.commit()
-            print("You will next see this note in " + human_friendly_time(new_interval), file=sys.stderr)
+            print("You will next see this note in " + human_friendly_time(new_interval),
+                  file=sys.stderr)
         if item_action == "again":
             c = conn.cursor()
-            new_interval = int(interval * 0.90)
-            c.execute("update notes set interval = ?, last_reviewed_on = ?, ease_factor = ? where sha1sum = ?",
-                      (new_interval, datetime.date.today(), int(max(130, ease_factor - 20)), sha1sum))
-            print("You will next see this note in " + human_friendly_time(new_interval), file=sys.stderr)
+            new_interval = int(item.interval * 0.90)
+            c.execute("""update notes
+                         set interval = ?, last_reviewed_on = ?, ease_factor = ?
+                         where sha1sum = ?""",
+                      (new_interval, datetime.date.today(),
+                       int(max(130, item.ease_factor - 20)), item.sha1sum))
+            print("You will next see this note in " + human_friendly_time(new_interval),
+                  file=sys.stderr)
             conn.commit()
 
 
