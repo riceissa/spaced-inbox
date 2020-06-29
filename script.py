@@ -33,10 +33,7 @@ def main():
         c = conn.cursor()
 
     notes_db  = [Note(*row) for row in
-                 c.execute("""select
-                                  sha1sum, note_text, line_number_start, line_number_end,
-                                  ease_factor, interval, last_reviewed_on
-                              from notes""").fetchall()]
+                 c.execute("select " + ", ".join(DB_COLUMNS) + " from notes").fetchall()]
     print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
