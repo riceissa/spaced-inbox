@@ -188,6 +188,7 @@ def print_due_notes(notes):
 def interact_loop(notes, conn):
     while True:
         command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
+        # FIXME: actually this still allows bad input like "1 goodish" so fix that
         if not re.match(r"\d+ (good|again)|quit", command):
             print("Not a valid command", file=sys.stderr)
             continue
