@@ -132,7 +132,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     coincidentally in the same spot in the file). This makes a difference when
     scheduling the note review."""
     c = conn.cursor()
-    db_hashes = set([note.sha1sum for note in notes_db])
+    db_hashes = set(note.sha1sum for note in notes_db)
     note_number = 0
     inbox_size = len(current_inbox)
     for (sha1sum, note_text, line_number_start, line_number_end) in current_inbox:
