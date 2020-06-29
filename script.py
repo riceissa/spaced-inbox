@@ -156,7 +156,7 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     inbox_hashes = set(sha1sum for (sha1sum, _, _, _) in current_inbox)
     delete_count = 0
     for note in notes_db:
-        if note.sha1sum not in inbox_hashes:
+        if note.sha1sum not in inbox_hashes and note.interval >= 0:
             delete_count += 1
             c.execute("update notes set interval = -1 where sha1sum = ?",
                       (note.sha1sum,))
