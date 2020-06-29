@@ -18,10 +18,14 @@ Note = namedtuple('Note', DB_COLUMNS)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--initial_import",
-                        help="Uniformly distribute new notes between days 50-150 rather than having everything due on day 50",
+                        help=("Uniformly distribute new notes between "
+                              "days 50-150 rather than having everything "
+                              "due on day 50"),
                         action="store_true")
     parser.add_argument("--no_review",
-                        help="Just import new notes, without printing due notes or going into the review interact loop",
+                        help=("Just import new notes, without "
+                              "printing due notes or going into "
+                              "the review interact loop"),
                         action="store_true")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
@@ -33,13 +37,15 @@ def main():
         conn = sqlite3.connect('data.db')
         c = conn.cursor()
 
-    notes_db  = [Note(*row) for row in
-                 c.execute("select " + ", ".join(DB_COLUMNS) + " from notes").fetchall()]
+    notes_db = [Note(*row) for row in
+                c.execute("select " + ", ".join(DB_COLUMNS) +
+                          " from notes").fetchall()]
     print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
 
-    update_notes_db(conn, notes_db, current_inbox, initial_import=args.initial_import)
+    update_notes_db(conn, notes_db, current_inbox,
+                    initial_import=args.initial_import)
     print("done.", file=sys.stderr)
 
     if not args.no_review:
@@ -104,7 +110,8 @@ def _print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context_based_identity=False):
+def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
+                    context_based_identity=False):
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -132,7 +139,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
     inbox_size = len(current_inbox)
-    for (sha1sum, note_text, line_number_start, line_number_end) in current_inbox:
+    for (sha1sum, note_text, line_number_start,
+         line_number_end) in current_inbox:
         if sha1sum in db_hashes and db_hashes[sha1sum].interval >= 0:
             # The note content is not new, but the position in the file may
             # have changed, so update the line numbers
@@ -159,7 +167,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
             else:
                 interval = 50
             c.execute("insert into notes (%s) values (%s)"
-                      % (", ".join(DB_COLUMNS), ", ".join(["?"]*len(DB_COLUMNS))),
+                      % (", ".join(DB_COLUMNS),
+                         ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
                            line_number_end, ease_factor=250, interval=interval,
                            last_reviewed_on=datetime.date.today()))
@@ -175,7 +184,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
             c.execute("update notes set interval = -1 where sha1sum = ?",
                       (note.sha1sum,))
     conn.commit()
-    print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr, end="")
+    print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr,
+          end="")
 
 
 def due_notes(notes_db):
@@ -184,7 +194,9 @@ def due_notes(notes_db):
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = datetime.datetime.strptime(note.last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=note.interval)
+        due_date = (datetime.datetime.strptime(note.last_reviewed_on,
+                                               "%Y-%m-%d").date() +
+                    datetime.timedelta(days=note.interval))
         if datetime.date.today() > due_date:
             result.append(note)
     return result
@@ -194,7 +206,8 @@ def print_due_notes(notes):
     for i, note in enumerate(notes):
         print("%s. L%s-%s [good: %s, again: %s] %s"
               % (i+1, note.line_number_start, note.line_number_end,
-                 human_friendly_time(good_interval(note.interval, note.ease_factor)),
+                 human_friendly_time(good_interval(note.interval,
+                                                   note.ease_factor)),
                  human_friendly_time(again_interval(note.interval)),
                  initial_fragment(note.note_text)))
 
@@ -202,7 +215,8 @@ def print_due_notes(notes):
 def interact_loop(notes, conn):
     while True:
         command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
-        # FIXME: actually this still allows bad input like "1 goodish" so fix that
+        # FIXME: actually this still allows bad input like "1 goodish" so fix
+        # that
         if not re.match(r"\d+ (good|again)|quit", command):
             print("Not a valid command", file=sys.stderr)
             continue
@@ -218,21 +232,24 @@ def interact_loop(notes, conn):
         if action == "good":
             c = conn.cursor()
             new_interval = good_interval(note.interval, note.ease_factor)
-            c.execute("update notes set interval = ?, last_reviewed_on = ? where sha1sum = ?",
+            c.execute("""update notes set interval = ?,
+                                          last_reviewed_on = ?
+                         where sha1sum = ?""",
                       (new_interval, datetime.date.today(), note.sha1sum))
             conn.commit()
-            print("You will next see this note in " + human_friendly_time(new_interval),
-                  file=sys.stderr)
+            print("You will next see this note in " +
+                  human_friendly_time(new_interval), file=sys.stderr)
         if action == "again":
             c = conn.cursor()
             new_interval = again_interval(note.interval)
-            c.execute("""update notes
-                         set interval = ?, last_reviewed_on = ?, ease_factor = ?
+            c.execute("""update notes set interval = ?,
+                                      last_reviewed_on = ?,
+                                      ease_factor = ?
                          where sha1sum = ?""",
                       (new_interval, datetime.date.today(),
                        int(max(130, note.ease_factor - 20)), note.sha1sum))
-            print("You will next see this note in " + human_friendly_time(new_interval),
-                  file=sys.stderr)
+            print("You will next see this note in " +
+                  human_friendly_time(new_interval), file=sys.stderr)
             conn.commit()
 
 
