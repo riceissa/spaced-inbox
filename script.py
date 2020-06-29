@@ -98,7 +98,7 @@ def parse_inbox(lines):
     return result
 
 
-def print_lines(string):
+def _print_lines(string):
     """Print a string with line numbers (for debugging parse_inbox)."""
     line_number = 0
     for line in string.split("\n"):
