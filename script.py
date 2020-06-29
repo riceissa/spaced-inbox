@@ -44,10 +44,10 @@ def main():
 
     if not args.no_review:
         notes = due_notes(notes_db)
-        print_due_notes(notes)
         if len(notes) == 0:
             print("No notes are due")
         else:
+            print_due_notes(notes)
             interact_loop(notes, conn)
 
 
