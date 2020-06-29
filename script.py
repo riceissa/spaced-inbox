@@ -152,10 +152,24 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False, context
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
+    # Soft-delete any notes that no longer exist in the current inbox
+    inbox_hashes = set(sha1sum for (sha1sum, _, _, _) in current_inbox)
+    delete_count = 0
+    for note in notes_db:
+        if note.sha1sum not in inbox_hashes:
+            delete_count += 1
+            c.execute("update notes set interval = -1 where sha1sum = ?",
+                      (note.sha1sum,))
+    conn.commit()
+    print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr, end="")
+
 
 def due_notes(notes_db):
     result = []
     for note in notes_db:
+        if note.interval < 0:
+            # This note was soft-deleted, so don't include in reviews
+            continue
         due_date = datetime.datetime.strptime(note.last_reviewed_on, "%Y-%m-%d").date() + datetime.timedelta(days=note.interval)
         if datetime.date.today() > due_date:
             result.append(note)
