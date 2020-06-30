@@ -13,6 +13,7 @@ The spacing algorithm is a simplified version of the one for [Anki/SM2](https://
 ## TODO
 
 - there's a good chance I'll hate how interaction works (right now you have to manually go to the relevant line)
+  - There's a way to _almost_ integrate interaction within standard text editors. Vim/emacs already support programs like grep, where it is possible to feed in a list of line numbers and be able to jump between them. This let's you _view_ the notes that are due and navigate between them. However, it does not give you a way to actually interact with that item (i.e. press "good" or "again") -- usually with grep/make you interact by _fixing something in the source file itself_, and by re-running grep/make, the error clears and it's removed from the list of errors. But with spaced inbox, you don't necessarily want to edit the note at all, in which case, you need some _other_ channel through which to tell the scheduler that you reviewed the note.
 - notes identity is very crude right now: we just check the sha1 hash, so any modification to a note will turn it into a note with different identity, which means the review schedule will reset. I think there's a decent chance this is actually ok: the notes you modify are the notes you are actually engaging with, so you actually want them around more frequently. (Unfortunately, I don't think I will find out if it's fine [anytime soon](https://wiki.issarice.com/wiki/Iteration_cadence_for_spaced_repetition_experiments).)
 
 ## License
