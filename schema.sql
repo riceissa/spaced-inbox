@@ -7,6 +7,6 @@ create table notes (
         line_number_start integer,
         line_number_end integer,
         ease_factor integer,  /* as a percentage, defaults to 250% like in Anki */
-        interval integer,  /* in days */
+        interval integer,  /* in days; -1 means the note has been soft-deleted */
         last_reviewed_on date
 );
