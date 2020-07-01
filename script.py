@@ -17,12 +17,12 @@ Note = namedtuple('Note', DB_COLUMNS)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--initial_import",
+    parser.add_argument("--initial-import",
                         help=("Uniformly distribute new notes between "
                               "days 50-150 rather than having everything "
                               "due on day 50"),
                         action="store_true")
-    parser.add_argument("--no_review",
+    parser.add_argument("--no-review",
                         help=("Just import new notes, without "
                               "printing due notes or going into "
                               "the review interact loop"),
