@@ -22,6 +22,8 @@ def main():
                               "days 50-150 rather than having everything "
                               "due on day 50"),
                         action="store_true")
+    # The following flag is useful if you just want to import new notes as a
+    # cronjob or something, and don't want to get trapped in the interact loop.
     parser.add_argument("--no-review",
                         help=("Just import new notes, without "
                               "printing due notes or going into "
