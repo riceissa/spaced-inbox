@@ -231,6 +231,11 @@ def interact_loop(notes, conn):
             continue
         note = notes[note_number-1]
         action = xs[1]
+        # FIXME: this doesn't currently prevent people from reviewing a card
+        # multiple times in the same session, which would just keep bumping the
+        # card more and more. I think if a card has already been reviewed in a
+        # session, we should say something like "This card was already
+        # reviewed".
         if action == "good":
             c = conn.cursor()
             new_interval = good_interval(note.interval, note.ease_factor)
