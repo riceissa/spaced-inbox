@@ -10,6 +10,14 @@ That's it! There's no app or writing interface: you get to choose your favorite 
 
 The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days, 125\*2.5 = 313 days, and so on.
 
+## some helpful sql commands to poke around in the db
+
+To find the notes that will be due first:
+
+```sql
+select last_reviewed_on, interval, date(last_reviewed_on, '+' || interval || ' day') as due_on from notes where due_on not null order by due_on asc limit 5;
+```
+
 ## TODO
 
 - there's a good chance I'll hate how interaction works (right now you have to manually go to the relevant line)
