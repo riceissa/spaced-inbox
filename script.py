@@ -199,7 +199,7 @@ def due_notes(notes_db):
         due_date = (datetime.datetime.strptime(note.last_reviewed_on,
                                                "%Y-%m-%d").date() +
                     datetime.timedelta(days=note.interval))
-        if datetime.date.today() > due_date:
+        if datetime.date.today() >= due_date:
             result.append(note)
     return result
 
