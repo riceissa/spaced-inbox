@@ -9,6 +9,14 @@ import sqlite3
 import hashlib
 from collections import namedtuple
 
+# TODO: add a "refresh" command. this is when i edit a note and want to do a
+# 'quit' followed by running the script again.
+
+# FIXME: there's a bug where if a note is due, then i edit it and type 'quit'
+# and then re-run the script, the note is still due. if i 'quit' again and then
+# re-run the script again, THEN the note is no longer due. so there's some sort
+# of weird thing going on, maybe the db needs to be updated after i quit?
+
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
