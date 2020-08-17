@@ -12,15 +12,17 @@ from collections import namedtuple
 # TODO: add a "refresh" command. this is when i edit a note and want to do a
 # 'quit' followed by running the script again.
 
-# FIXME: there's a bug where if a note is due, then i edit it and type 'quit'
-# and then re-run the script, the note is still due. if i 'quit' again and then
-# re-run the script again, THEN the note is no longer due. so there's some sort
-# of weird thing going on, maybe the db needs to be updated after i quit?
-
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
 Note = namedtuple('Note', DB_COLUMNS)
+
+
+def get_notes_from_db(conn):
+    c = conn.cursor()
+    return [Note(*row) for row in
+            c.execute("select " + ", ".join(DB_COLUMNS) +
+                      " from notes").fetchall()]
 
 
 def main():
@@ -45,11 +47,8 @@ def main():
             c.executescript(f.read())
     else:
         conn = sqlite3.connect('data.db')
-        c = conn.cursor()
 
-    notes_db = [Note(*row) for row in
-                c.execute("select " + ", ".join(DB_COLUMNS) +
-                          " from notes").fetchall()]
+    notes_db = get_notes_from_db(conn)
     print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
@@ -57,6 +56,13 @@ def main():
     update_notes_db(conn, notes_db, current_inbox,
                     initial_import=args.initial_import)
     print("done.", file=sys.stderr)
+
+    # After we update the db using the current inbox, we must query the db
+    # again since the due dates for some of the notes may have changed (e.g.
+    # some notes may have been deleted). This fixes a bug where if a note is
+    # due, then I edit it and type 'quit' and then re-run the script, the note
+    # is still due.
+    notes_db = get_notes_from_db(conn)
 
     if not args.no_review:
         notes = due_notes(notes_db)
