@@ -12,6 +12,11 @@ from collections import namedtuple
 # TODO: add a "refresh" command. this is when i edit a note and want to do a
 # 'quit' followed by running the script again.
 
+# TODO: i've noticed that due to my OCD-ness, the way i review is to handle
+# just a single item at a time, then type 'quit' and then re-run the script
+# again. So now instead of just having a refresh command (which i totally do
+# need), i also in addition need to have the screen auto-refresh whenever i
+# type a command like "1 good".
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
