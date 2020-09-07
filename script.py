@@ -18,6 +18,18 @@ from collections import namedtuple
 # need), i also in addition need to have the screen auto-refresh whenever i
 # type a command like "1 good".
 
+# TODO: currently, good_interval() uses interval as an input. This works well
+# in most cases, but for --initial-import cards that show up much later in time,
+# the cards can have a large starting interval even on the first time the card
+# is reviewed. This means these cards are in effect reviewed much less
+# frequently than other cards, just because they happened to be added near the
+# end of the queue. I think what we want to do instead is to alter the last
+# review date and push this date back, while keeping the initial interval the
+# same in all cases.
+# (This created the strange problem where items that are due on the same day
+# have different interval lengths, even though both cards were the first time I
+# had reviewed them.)
+
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
 Note = namedtuple('Note', DB_COLUMNS)
