@@ -30,6 +30,13 @@ from collections import namedtuple
 # have different interval lengths, even though both cards were the first time I
 # had reviewed them.)
 
+# TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
+# if i suddenly add all of my browser bookmarks as separate items in the inbox
+# file and then import using --initial-import, will that screw things up, or
+# will it work as expected? If I can get this to work, it will be very
+# convenient as I can keep growing my inbox/adding more "streams" to it by
+# bulk-adding followed by incremental updates.
+
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
 Note = namedtuple('Note', DB_COLUMNS)
