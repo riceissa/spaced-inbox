@@ -37,6 +37,11 @@ from collections import namedtuple
 # convenient as I can keep growing my inbox/adding more "streams" to it by
 # bulk-adding followed by incremental updates.
 
+# TODO: i am realizing that i often purposely don't fix some typos on boring
+# notes because i reason that if i *do* fix them then that will reset the
+# review schedule to 50 days, which i don't want. maybe there should be some
+# way to make trivial changes without affecting the review schedule.
+
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on']
 Note = namedtuple('Note', DB_COLUMNS)
