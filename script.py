@@ -36,6 +36,13 @@ from collections import namedtuple
 # will it work as expected? If I can get this to work, it will be very
 # convenient as I can keep growing my inbox/adding more "streams" to it by
 # bulk-adding followed by incremental updates.
+# A related problem: if i do an initial import from one source, then do initial
+# import from a different source, that might mean doubling up on some of the
+# days (if the two imports are done close in time), so it basically doubles my
+# workload for those days. it might be good to check in the db first to figure
+# out which days in the next 300 days or whatever has the least amount of work,
+# then start by putting notes in those days, and gradually work up to the days
+# with more workload.
 
 # TODO: i am realizing that i often purposely don't fix some typos on boring
 # notes because i reason that if i *do* fix them then that will reset the
