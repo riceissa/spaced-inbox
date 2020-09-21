@@ -29,6 +29,11 @@ from collections import namedtuple
 # (This created the strange problem where items that are due on the same day
 # have different interval lengths, even though both cards were the first time I
 # had reviewed them.)
+# I think I can add a new column in the db called "added_on" or something so
+# that there is a record of when a particular note was created; that should
+# help with archival. Maybe I can also rename last_reviewed_on to something
+# slightly different to make it clear that it can also be set via the importing
+# process.
 
 # TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
 # if i suddenly add all of my browser bookmarks as separate items in the inbox
