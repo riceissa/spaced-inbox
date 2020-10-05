@@ -271,6 +271,7 @@ def print_due_notes(notes):
 
 def interact_loop(conn, no_review, initial_import):
     while True:
+        clear_screen()
         notes_db = reload_db(conn, initial_import)
         if no_review:
             break
@@ -288,7 +289,6 @@ def interact_loop(conn, no_review, initial_import):
             print("Not a valid command", file=sys.stderr)
             continue
         if command.strip() in ["r", "refresh"]:
-            clear_screen()
             continue
         if command.strip() in ["q", "quit"]:
             break
