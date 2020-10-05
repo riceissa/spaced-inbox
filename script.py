@@ -10,12 +10,6 @@ import sqlite3
 import hashlib
 from collections import namedtuple
 
-# TODO: i've noticed that due to my OCD-ness, the way i review is to handle
-# just a single item at a time, then type 'quit' and then re-run the script
-# again. So now instead of just having a refresh command (which i totally do
-# need), i also in addition need to have the screen auto-refresh whenever i
-# type a command like "1 good".
-
 # TODO: currently, good_interval() uses interval as an input. This works well
 # in most cases, but for --initial-import cards that show up much later in time,
 # the cards can have a large starting interval even on the first time the card
