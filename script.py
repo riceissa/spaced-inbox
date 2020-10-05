@@ -3,14 +3,12 @@
 import argparse
 import datetime
 import re
+import os
 import os.path
 import sys
 import sqlite3
 import hashlib
 from collections import namedtuple
-
-# TODO: add a "refresh" command. this is when i edit a note and want to do a
-# 'quit' followed by running the script again.
 
 # TODO: i've noticed that due to my OCD-ness, the way i review is to handle
 # just a single item at a time, then type 'quit' and then re-run the script
@@ -89,13 +87,17 @@ def main():
     else:
         conn = sqlite3.connect('data.db')
 
+    interact_loop(conn, args.no_review, args.initial_import)
+
+
+def reload_db(conn, initial_import):
     notes_db = get_notes_from_db(conn)
     print("Importing new notes... ", file=sys.stderr, end="")
     with open("/home/issa/projects/notes/inbox.txt", "r") as f:
         current_inbox = parse_inbox(f)
 
     update_notes_db(conn, notes_db, current_inbox,
-                    initial_import=args.initial_import)
+                    initial_import=initial_import)
     print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
@@ -105,13 +107,11 @@ def main():
     # is still due.
     notes_db = get_notes_from_db(conn)
 
-    if not args.no_review:
-        notes = due_notes(notes_db)
-        if len(notes) == 0:
-            print("No notes are due")
-        else:
-            print_due_notes(notes)
-            interact_loop(notes, conn)
+    return notes_db
+
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def parse_inbox(lines):
@@ -269,15 +269,28 @@ def print_due_notes(notes):
                  initial_fragment(note.note_text)))
 
 
-def interact_loop(notes, conn):
+def interact_loop(conn, no_review, initial_import):
     while True:
-        command = input("Enter a command (e.g. '1 good', '1 again', 'quit'): ")
+        notes_db = reload_db(conn, initial_import)
+        if no_review:
+            break
+        notes = due_notes(notes_db)
+        if len(notes) == 0:
+            print("No notes are due")
+            break
+        else:
+            print_due_notes(notes)
+
+        command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', '[q]uit'): ")
         # FIXME: actually this still allows bad input like "1 goodish" so fix
         # that
-        if not re.match(r"\d+ (good|again)|quit", command):
+        if not re.match(r"\d+ (good|again)|quit|refresh|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
-        if command.strip() == "quit":
+        if command.strip() in ["r", "refresh"]:
+            clear_screen()
+            continue
+        if command.strip() in ["q", "quit"]:
             break
         xs = command.strip().split()
         note_number = int(xs[0])
