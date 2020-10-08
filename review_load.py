@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# This script displays a histogram of your future review load.
+
 import matplotlib.pyplot as plt
 import datetime
 import sqlite3
@@ -17,6 +19,6 @@ for last_reviewed_on_, interval in data:
     due_ins.append(due_in)
 
 plt.hist(due_ins, bins=200)
+plt.xlabel("days in the future")
+plt.ylabel("number of notes due for review on this day")
 plt.show()
-
-
