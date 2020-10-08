@@ -18,6 +18,8 @@ To find the notes that will be due first:
 select last_reviewed_on, interval, date(last_reviewed_on, '+' || interval || ' day') as due_on from notes where due_on not null order by due_on asc limit 5;
 ```
 
+See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/blob/master/review_load.py).
+
 ## TODO
 
 - there's a good chance I'll hate how interaction works (right now you have to manually go to the relevant line)
