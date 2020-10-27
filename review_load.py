@@ -18,7 +18,23 @@ for last_reviewed_on_, interval in data:
     due_in = (due_on - datetime.datetime.today()).days
     due_ins.append(due_in)
 
-plt.hist(due_ins, bins=200)
+fig, axs = plt.subplots(2)
+
+axs[0].hist(due_ins, bins=200)
+
+due_dict = {}
+for x in due_ins:
+    due_dict[x] = due_dict.get(x, 0) + 1
+xs = list(range(min(due_ins), max(due_ins) + 1))
+ys = []
+for x in xs:
+    if x in due_dict:
+        ys.append(due_dict[x])
+    else:
+        ys.append(0)
+axs[1].plot(xs, ys)
+
+
 plt.xlabel("days in the future")
 plt.ylabel("number of notes due for review on this day")
 plt.show()
