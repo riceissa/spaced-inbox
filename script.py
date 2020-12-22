@@ -254,13 +254,25 @@ def due_notes(notes_db):
 
 
 def print_due_notes(notes):
+    n = len(notes)
     for i, note in enumerate(notes):
+        if i == n-1:
+            # The motivation here is the following: it's way simpler
+            # to review items using the printed output rather than
+            # having to change windows to the text editor, manually
+            # type the line, then review it there. If no editing needs
+            # to take place, it's better to see more of the final note
+            # so that you can just do "n good".
+            print("===================================================")
+            fragment = initial_fragment(note.note_text, 120)
+        else:
+            fragment = initial_fragment(note.note_text)
         print("%s. L%s-%s [good: %s, again: %s] %s"
               % (i+1, note.line_number_start, note.line_number_end,
                  human_friendly_time(good_interval(note.interval,
                                                    note.ease_factor)),
                  human_friendly_time(again_interval(note.interval)),
-                 initial_fragment(note.note_text)))
+                 fragment))
 
 
 def interact_loop(conn, no_review, initial_import):
