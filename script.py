@@ -8,6 +8,7 @@ import os.path
 import sys
 import sqlite3
 import hashlib
+import subprocess
 from collections import namedtuple
 
 # TODO: currently, good_interval() uses interval as an input. This works well
@@ -72,6 +73,12 @@ def main():
                               "printing due notes or going into "
                               "the review interact loop"),
                         action="store_true")
+    parser.add_argument("--external-program",
+                        help=("External program that can be used to do the "
+                              "reviews. Currently only emacs is supported (to use "
+                              "emacs, keep your inbox file as the current buffer, "
+                              "then run this script with this argument)."),
+                        action="store")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
         with open("schema.sql", "r") as f:
@@ -81,7 +88,7 @@ def main():
     else:
         conn = sqlite3.connect('data.db')
 
-    interact_loop(conn, args.no_review, args.initial_import)
+    interact_loop(conn, args.no_review, args.initial_import, args.external_program)
 
 
 def reload_db(conn, initial_import):
@@ -275,7 +282,7 @@ def print_due_notes(notes):
                  fragment))
 
 
-def interact_loop(conn, no_review, initial_import):
+def interact_loop(conn, no_review, initial_import, external_program):
     while True:
         clear_screen()
         notes_db = reload_db(conn, initial_import)
@@ -287,6 +294,15 @@ def interact_loop(conn, no_review, initial_import):
             break
         else:
             print_due_notes(notes)
+            if external_program == "emacs":
+                loc = notes[-1].line_number_start
+                elisp = ("""
+                    (with-current-buffer
+                        (window-buffer (selected-window))
+                      (goto-line %s)
+                      (recenter-top-bottom 0))
+                """ % loc).replace("\n", " ").strip()
+                p = subprocess.Popen(["emacsclient", "-e", elisp], stdout=subprocess.PIPE)
 
         command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', '[q]uit'): ")
         # FIXME: actually this still allows bad input like "1 goodish" so fix
