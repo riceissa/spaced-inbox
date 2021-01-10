@@ -55,6 +55,12 @@ See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/b
     With vim, maybe one possibility is to add commands like `:InboxGood` and `:InboxAgain`. Then what happens is that these commands re-import the inbox file (to correct any changes to line numbers), then uses the current line number in the text editor to identify which note the command is about. Then it does an update to the db where the interval/last review date changes. If the note is edited, it's not necessary to press good/again since the review schedule resets to 50 days. Then the command re-runs grepprg/makeprg to refresh the list of due items. (there's actually functions called getqflist and setqflist, which can programmatically alter the quickfix list without setting grepprg/makeprg.)
 
     Another idea (which doesn't solve the problem above) is for the python script to continuously monitor the inbox text file for changes, and to re-import every time the file is written (at least, while the review session is in progress).
+
+    UPDATE: `script.py` now supports the `--external-program` flag, so you can run like
+    `./script --external-program emacs`; the cursor in emacs will now jump to
+    the line for the last note that is printed on the command line, so you no
+    longer need to manually type in line numbers with `M-g g`.
+
 - notes identity is very crude right now: we just check the sha1 hash, so any modification to a note will turn it into a note with different identity, which means the review schedule will reset. I think there's a decent chance this is actually ok: the notes you modify are the notes you are actually engaging with, so you actually want them around more frequently. (Unfortunately, I don't think I will find out if it's fine [anytime soon](https://wiki.issarice.com/wiki/Iteration_cadence_for_spaced_repetition_experiments).)
 
 ## License
