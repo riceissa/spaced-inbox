@@ -10,6 +10,33 @@ That's it! There's no app or writing interface: you get to choose your favorite 
 
 The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days, 125\*2.5 = 313 days, and so on.
 
+## Why not just use Anki?
+
+There are two senses in which one might "use Anki":
+
+1. Add notes directly to Anki using the Anki interface, and review using Anki:
+   I think it's pretty important to reduce friction for capturing thoughts. So
+   this rules out adding notes directly to Anki for me. I could look into
+   figuring out how to quickly and comfortably add new notes to Anki, but I've
+   been wary of going down the rabbit hole of customizing Anki.
+2. Have a plain text file in which to add notes, but periodically collect these
+   notes and add them to Anki using a script, then thereafter review using
+   Anki: I could have done this instead, but (a) I didn't think of doing this
+   when I started, (b) it would have taken longer to implement the inbox, since
+   I would have had to read Anki documentation about its database structure
+   (whereas with my current implementation, I could just roll my own database
+   schema), (c) when it comes time to edit any notes, I would be stuck
+   editing them in the Anki's interface rather than my preferred text editor,
+   and (d) something I like to do is to scroll up in the inbox file to see some
+   of my recent thoughts (especially when picking things to write about on my
+   [wiki](https://wiki.issarice.com/)). I could do this in Anki using the
+   browse window, but I would have to click on each note instead of just
+   scrolling. Again, it's not something that is impossible to do using Anki,
+   but would doing it via Anki would add more friction.
+
+(Thanks to TheCedarPrince for prompting me with the questions that led to these
+thoughts.)
+
 ## some helpful sql commands to poke around in the db
 
 To find the notes that will be due first:
