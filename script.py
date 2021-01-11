@@ -11,23 +11,6 @@ import hashlib
 import subprocess
 from collections import namedtuple
 
-# TODO: currently, good_interval() uses interval as an input. This works well
-# in most cases, but for --initial-import cards that show up much later in time,
-# the cards can have a large starting interval even on the first time the card
-# is reviewed. This means these cards are in effect reviewed much less
-# frequently than other cards, just because they happened to be added near the
-# end of the queue. I think what we want to do instead is to alter the last
-# review date and push this date back, while keeping the initial interval the
-# same in all cases.
-# (This created the strange problem where items that are due on the same day
-# have different interval lengths, even though both cards were the first time I
-# had reviewed them.)
-# I think I can add a new column in the db called "added_on" or something so
-# that there is a record of when a particular note was created; that should
-# help with archival. Maybe I can also rename last_reviewed_on to something
-# slightly different to make it clear that it can also be set via the importing
-# process.
-
 # TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
 # if i suddenly add all of my browser bookmarks as separate items in the inbox
 # file and then import using --initial-import, will that screw things up, or
