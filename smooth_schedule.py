@@ -17,7 +17,7 @@ notes = [note for note in script.get_notes_from_db(conn) if note.interval >= 0]
 def get_due_date(note):
     # We use last_reviewed_on here instead of interval_anchor; it's the
     # "natural" review date. If we repeatedly smooth the schedule, then some
-    # notes might get prioritized in weird ways we were to use interval_anchor.
+    # notes might get prioritized in weird ways were we to use interval_anchor.
     # Using last_reviewed_on should be more stable under multiple runs of the
     # smoother algorithm.
     last_reviewed_on = datetime.datetime.strptime(note.last_reviewed_on, "%Y-%m-%d").date()
