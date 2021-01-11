@@ -33,16 +33,15 @@ all_dates = sorted(list(due_dates.keys()))
 date = all_dates[0]
 while True:
     if date < today:
-        due_dates[today] += due_dates[date]
+        due_dates[today] += due_dates.get(date, [])
         due_dates[date] = []
-    if len(due_dates[date]) > MAX_REVIEWS_PER_DAY:
+    if len(due_dates.get(date, [])) > MAX_REVIEWS_PER_DAY:
         # Find the notes that have the most early due dates (according to the
         # original scheduling) and keep them, while pushing others further
         # back. TODO: Use the last_reviewed_on dates as tie breakers.
-        lst = sorted(due_dates[date], key=lambda note: get_due_date(note))
+        lst = sorted(due_dates.get(date, []), key=lambda note: get_due_date(note))
         due_dates[date] = lst[:MAX_REVIEWS_PER_DAY]
         due_dates[date + datetime.timedelta(days=1)] = lst[MAX_REVIEWS_PER_DAY:]
-    date = date + datetime.timedelta(days=1)
 
     # TODO: break out of this loop if each later date has at most
     # MAX_REVIEWS_PER_DAY reviews due. that means there is nothing left to
@@ -50,6 +49,7 @@ while True:
     later_dates = [d for d in due_dates if d > date]
     if len(later_dates) == 0:
         break
+    date = date + datetime.timedelta(days=1)
 
 
 # cur = conn.cursor()
