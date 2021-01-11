@@ -48,7 +48,7 @@ from collections import namedtuple
 # way to make trivial changes without affecting the review schedule.
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-              'ease_factor', 'interval', 'last_reviewed_on']
+              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor']
 Note = namedtuple('Note', DB_COLUMNS)
 
 
@@ -214,10 +214,11 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
                                           line_number_end = ?,
                                           ease_factor = ?,
                                           interval = ?,
-                                          last_reviewed_on = ?
+                                          last_reviewed_on = ?,
+                                          interval_anchor = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 250, 50,
-                       datetime.date.today(), sha1sum))
+                       datetime.date.today(), datetime.date.today(), sha1sum))
         else:
             note_number += 1
             if initial_import:
@@ -229,7 +230,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
                          ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
                            line_number_end, ease_factor=250, interval=interval,
-                           last_reviewed_on=datetime.date.today()))
+                           last_reviewed_on=datetime.date.today(),
+                           interval_anchor=datetime.date.today()))
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
@@ -252,7 +254,7 @@ def due_notes(notes_db):
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = (datetime.datetime.strptime(note.last_reviewed_on,
+        due_date = (datetime.datetime.strptime(note.interval_anchor,
                                                "%Y-%m-%d").date() +
                     datetime.timedelta(days=note.interval))
         if datetime.date.today() >= due_date:
@@ -330,9 +332,10 @@ def interact_loop(conn, no_review, initial_import, external_program):
             c = conn.cursor()
             new_interval = good_interval(note.interval, note.ease_factor)
             c.execute("""update notes set interval = ?,
-                                          last_reviewed_on = ?
+                                          last_reviewed_on = ?,
+                                          interval_anchor = ?
                          where sha1sum = ?""",
-                      (new_interval, datetime.date.today(), note.sha1sum))
+                      (new_interval, datetime.date.today(), datetime.date.today(), note.sha1sum))
             conn.commit()
             print("You will next see this note in " +
                   human_friendly_time(new_interval), file=sys.stderr)
@@ -341,9 +344,10 @@ def interact_loop(conn, no_review, initial_import, external_program):
             new_interval = again_interval(note.interval)
             c.execute("""update notes set interval = ?,
                                       last_reviewed_on = ?,
+                                      interval_anchor = ?,
                                       ease_factor = ?
                          where sha1sum = ?""",
-                      (new_interval, datetime.date.today(),
+                      (new_interval, datetime.date.today(), datetime.date.today(),
                        int(max(130, note.ease_factor - 20)), note.sha1sum))
             print("You will next see this note in " +
                   human_friendly_time(new_interval), file=sys.stderr)
