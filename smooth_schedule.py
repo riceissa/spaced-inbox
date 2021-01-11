@@ -6,12 +6,16 @@ import sys
 
 import script
 
+
+import pdb
+
 MAX_REVIEWS_PER_DAY = 5
 if __name__ == "__main__":
     DB_FILE = sys.argv[1]
 
 conn = sqlite3.connect(DB_FILE)
 notes = [note for note in script.get_notes_from_db(conn) if note.interval >= 0]
+print("A:", len(notes))
 
 def get_due_date(note):
     # We use last_reviewed_on here instead of interval_anchor; it's the
@@ -32,6 +36,12 @@ for note in notes:
 
 today = datetime.date.today()
 all_dates = sorted(list(due_dates.keys()))
+
+n = 0
+for d in due_dates:
+    n += len(due_dates[d])
+print("B:", n)
+
 
 # Now we move notes around so there aren't more than five notes due on any day
 date = all_dates[0]
@@ -57,12 +67,18 @@ while True:
     date = date + datetime.timedelta(days=1)
 
 
-cur = conn.cursor()
-for date in due_dates:
-    for note in due_dates[date]:
-        cur.execute("""
-                update notes set interval_anchor = ?
-                where sha1sum = ?
-        """,
-        (date, note.sha1sum))
-conn.commit()
+n = 0
+for d in due_dates:
+    n += len(due_dates[d])
+print("C:", n)
+
+
+# cur = conn.cursor()
+# for date in due_dates:
+#     for note in due_dates[date]:
+#         cur.execute("""
+#                 update notes set interval_anchor = ?
+#                 where sha1sum = ?
+#         """,
+#         (date, note.sha1sum))
+# conn.commit()
