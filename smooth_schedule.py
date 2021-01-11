@@ -50,10 +50,19 @@ while True:
     # TODO: break out of this loop if each later date has at most
     # MAX_REVIEWS_PER_DAY reviews due. that means there is nothing left to
     # smooth. actually, just break out if there's no dates further out.
+    # This is guaranteed to terminate since there are a finite number of notes.
     later_dates = [d for d in due_dates if d > date]
     if len(later_dates) == 0:
         break
     date = date + datetime.timedelta(days=1)
 
 
-# cur = conn.cursor()
+cur = conn.cursor()
+for date in due_dates:
+    for note in due_dates[date]:
+        cur.execute("""
+                update notes set interval_anchor = ?
+                where sha1sum = ?
+        """,
+        (date, note.sha1sum))
+conn.commit()
