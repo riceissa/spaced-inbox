@@ -45,7 +45,7 @@ while True:
     if len(due_dates.get(date, [])) > MAX_REVIEWS_PER_DAY:
         # Find the notes that have the most early due dates (according to the
         # original scheduling) and keep them, while pushing others further
-        # back. TODO: Use the last_reviewed_on dates as tie breakers.
+        # back.
         lst = sorted(due_dates.get(date, []), key=lambda note: get_due_date(note))
         due_dates[date] = lst[:MAX_REVIEWS_PER_DAY]
         if next_date not in due_dates:
