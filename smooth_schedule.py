@@ -52,12 +52,9 @@ while True:
             due_dates[next_date] = []
         due_dates[next_date] += lst[MAX_REVIEWS_PER_DAY:]
 
-    # TODO: break out of this loop if each later date has at most
-    # MAX_REVIEWS_PER_DAY reviews due. that means there is nothing left to
-    # smooth. actually, just break out if there's no dates further out.
-    # This is guaranteed to terminate since there are a finite number of notes.
-    later_dates = [d for d in due_dates if d > date]
-    if len(later_dates) == 0:
+    # Break out of the loop if there are no dates further out. This is
+    # guaranteed to terminate since there are a finite number of notes.
+    if not any(d > date for d in due_dates):
         break
     date = next_date
 
