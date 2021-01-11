@@ -2,12 +2,15 @@
 
 import datetime
 import sqlite3
+import sys
 
 import script
 
 MAX_REVIEWS_PER_DAY = 5
+if __name__ == "__main__":
+    DB_FILE = sys.argv[1]
 
-conn = sqlite3.connect('data.db')
+conn = sqlite3.connect(DB_FILE)
 notes = [note for note in script.get_notes_from_db(conn) if note.interval >= 0]
 
 def get_due_date(note):
