@@ -63,12 +63,12 @@ while True:
     date = next_date
 
 
-# cur = conn.cursor()
-# for date in due_dates:
-#     for note in due_dates[date]:
-#         cur.execute("""
-#                 update notes set interval_anchor = ?
-#                 where sha1sum = ?
-#         """,
-#         (date, note.sha1sum))
-# conn.commit()
+cur = conn.cursor()
+for date in due_dates:
+    for note in due_dates[date]:
+        cur.execute("""
+                update notes set interval_anchor = ?
+                where sha1sum = ?
+        """,
+        (date, note.sha1sum))
+conn.commit()
