@@ -7,7 +7,6 @@ import sys
 import script
 
 
-
 MAX_REVIEWS_PER_DAY = 5
 if __name__ == "__main__":
     DB_FILE = sys.argv[1]
@@ -70,5 +69,7 @@ for date in due_dates:
                 update notes set interval_anchor = ?
                 where sha1sum = ?
         """,
-        (date, note.sha1sum))
+        # We want to make the note due on date, so subtract the interval from
+        # it, so that when we add back the interval we get date
+        (date - datetime.timedelta(days=note.interval), note.sha1sum))
 conn.commit()
