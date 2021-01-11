@@ -221,17 +221,17 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
                        datetime.date.today(), datetime.date.today(), sha1sum))
         else:
             note_number += 1
+            interval_anchor = datetime.date.today()
             if initial_import:
-                interval = int(50 + min(1, 100/inbox_size) * note_number)
-            else:
-                interval = 50
+                interval_extra_offset = int(min(1, 100/inbox_size) * note_number)
+                interval_anchor += datetime.timedelta(days=interval_extra_offset)
             c.execute("insert into notes (%s) values (%s)"
                       % (", ".join(DB_COLUMNS),
                          ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
-                           line_number_end, ease_factor=250, interval=interval,
+                           line_number_end, ease_factor=250, interval=50,
                            last_reviewed_on=datetime.date.today(),
-                           interval_anchor=datetime.date.today()))
+                           interval_anchor=interval_anchor))
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
