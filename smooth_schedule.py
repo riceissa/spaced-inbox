@@ -7,7 +7,6 @@ import sys
 import script
 
 
-import pdb
 
 MAX_REVIEWS_PER_DAY = 5
 if __name__ == "__main__":
@@ -15,7 +14,6 @@ if __name__ == "__main__":
 
 conn = sqlite3.connect(DB_FILE)
 notes = [note for note in script.get_notes_from_db(conn) if note.interval >= 0]
-print("A:", len(notes))
 
 def get_due_date(note):
     # We use last_reviewed_on here instead of interval_anchor; it's the
@@ -37,15 +35,11 @@ for note in notes:
 today = datetime.date.today()
 all_dates = sorted(list(due_dates.keys()))
 
-n = 0
-for d in due_dates:
-    n += len(due_dates[d])
-print("B:", n)
-
 
 # Now we move notes around so there aren't more than five notes due on any day
 date = all_dates[0]
 while True:
+    next_date = date + datetime.timedelta(days=1)
     if date < today:
         due_dates[today] += due_dates.get(date, [])
         due_dates[date] = []
@@ -55,7 +49,9 @@ while True:
         # back. TODO: Use the last_reviewed_on dates as tie breakers.
         lst = sorted(due_dates.get(date, []), key=lambda note: get_due_date(note))
         due_dates[date] = lst[:MAX_REVIEWS_PER_DAY]
-        due_dates[date + datetime.timedelta(days=1)] = lst[MAX_REVIEWS_PER_DAY:]
+        if next_date not in due_dates:
+            due_dates[next_date] = []
+        due_dates[next_date] += lst[MAX_REVIEWS_PER_DAY:]
 
     # TODO: break out of this loop if each later date has at most
     # MAX_REVIEWS_PER_DAY reviews due. that means there is nothing left to
@@ -64,13 +60,7 @@ while True:
     later_dates = [d for d in due_dates if d > date]
     if len(later_dates) == 0:
         break
-    date = date + datetime.timedelta(days=1)
-
-
-n = 0
-for d in due_dates:
-    n += len(due_dates[d])
-print("C:", n)
+    date = next_date
 
 
 # cur = conn.cursor()
