@@ -4,15 +4,27 @@ import datetime
 import sqlite3
 import sys
 
-import script
+from script import DB_COLUMNS
 
 
 MAX_REVIEWS_PER_DAY = 5
 if __name__ == "__main__":
     DB_FILE = sys.argv[1]
+    INBOX_FILEPATH = sys.argv[2]
 
 conn = sqlite3.connect(DB_FILE)
-notes = [note for note in script.get_notes_from_db(conn) if note.interval >= 0]
+cur = conn.cursor()
+fetched = cur.execute("""
+    select {cols} from notes
+    where
+        filepath = '{filepath}' and
+        interval >= 0
+    """.format(
+        cols=", ".join(DB_COLUMNS),
+        filepath=INBOX_FILEPATH
+    )
+).fetchall()
+notes = [Note(*row) for row in fetched]
 
 def get_due_date(note):
     # We use last_reviewed_on here instead of interval_anchor; it's the

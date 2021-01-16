@@ -94,7 +94,7 @@ def reload_db(conn, initial_import):
                 cols=", ".join(DB_COLUMNS),
                 filepath=inbox
             )
-        )
+        ).fetchall()
         notes_db = [Note(*row) for row in fetched]
         print("Importing new notes from {}... ".format(inbox),
               file=sys.stderr, end="")
