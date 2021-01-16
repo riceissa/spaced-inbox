@@ -31,8 +31,17 @@ from collections import namedtuple
 # way to make trivial changes without affecting the review schedule.
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor']
+              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
+              'filepath']
 Note = namedtuple('Note', DB_COLUMNS)
+
+INBOX_FILES = []
+
+with open("inbox_files.txt", "r") as f:
+    for line in f:
+        if line.strip().startswith("#"):
+            continue
+        INBOX_FILES.append(line.strip())
 
 
 def get_notes_from_db(conn):
@@ -75,23 +84,33 @@ def main():
 
 
 def reload_db(conn, initial_import):
-    notes_db = get_notes_from_db(conn)
-    print("Importing new notes... ", file=sys.stderr, end="")
-    with open("/home/issa/projects/notes/inbox.txt", "r") as f:
-        current_inbox = parse_inbox(f)
-
-    update_notes_db(conn, notes_db, current_inbox,
-                    initial_import=initial_import)
-    print("done.", file=sys.stderr)
+    for inbox in INBOX_FILES:
+        cur = conn.cursor()
+        fetched = cur.execute("""
+            select {cols} from notes
+            where
+                filepath = '{filepath}'
+            """.format(
+                cols=", ".join(DB_COLUMNS),
+                filepath=inbox
+            )
+        )
+        notes_db = [Note(*row) for row in fetched]
+        print("Importing new notes from {}... ".format(inbox),
+              file=sys.stderr, end="")
+        with open(inbox, "r") as f:
+            current_inbox = parse_inbox(f)
+        update_notes_db(conn, inbox, notes_db, current_inbox,
+                        initial_import=initial_import)
+        print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
     # some notes may have been deleted). This fixes a bug where if a note is
     # due, then I edit it and type 'quit' and then re-run the script, the note
     # is still due.
-    notes_db = get_notes_from_db(conn)
-
-    return notes_db
+    combined_notes_db = get_notes_from_db(conn)
+    return combined_notes_db
 
 
 def clear_screen():
@@ -151,8 +170,8 @@ def _print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
-                    context_based_identity=False):
+def update_notes_db(conn, inbox_filepath, notes_db, current_inbox,
+                    initial_import=False, context_based_identity=False):
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -198,10 +217,12 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
                                           ease_factor = ?,
                                           interval = ?,
                                           last_reviewed_on = ?,
-                                          interval_anchor = ?
+                                          interval_anchor = ?,
+                                          filepath = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 250, 50,
-                       datetime.date.today(), datetime.date.today(), sha1sum))
+                       datetime.date.today(), datetime.date.today(),
+                       inbox_filepath, sha1sum))
         else:
             note_number += 1
             interval_anchor = datetime.date.today()
@@ -214,7 +235,8 @@ def update_notes_db(conn, notes_db, current_inbox, initial_import=False,
                       Note(sha1sum, note_text, line_number_start,
                            line_number_end, ease_factor=250, interval=50,
                            last_reviewed_on=datetime.date.today(),
-                           interval_anchor=interval_anchor))
+                           interval_anchor=interval_anchor,
+                           filepath=inbox_filepath))
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
@@ -284,9 +306,10 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 elisp = ("""
                     (with-current-buffer
                         (window-buffer (selected-window))
+                      (find-file "%s")
                       (goto-line %s)
                       (recenter-top-bottom 0))
-                """ % loc).replace("\n", " ").strip()
+                """ % (notes[-1].filepath, loc)).replace("\n", " ").strip()
                 p = subprocess.Popen(["emacsclient", "-e", elisp], stdout=subprocess.PIPE)
 
         command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', '[q]uit'): ")
