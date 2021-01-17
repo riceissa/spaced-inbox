@@ -281,8 +281,9 @@ def print_due_notes(notes):
             fragment = initial_fragment(note.note_text, 120)
         else:
             fragment = initial_fragment(note.note_text)
-        print("%s. L%s-%s [good: %s, again: %s] %s"
-              % (i+1, note.line_number_start, note.line_number_end,
+        print("%s. %s L%s-%s [good: %s, again: %s] %s"
+              % (i+1, note.filepath,
+                 note.line_number_start, note.line_number_end,
                  human_friendly_time(good_interval(note.interval,
                                                    note.ease_factor)),
                  human_friendly_time(again_interval(note.interval)),
