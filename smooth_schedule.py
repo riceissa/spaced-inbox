@@ -44,7 +44,7 @@ today = datetime.date.today()
 all_dates = sorted(list(due_dates.keys()))
 
 
-# Now we move notes around so there aren't more than five notes due on any day
+# Now we move notes around so there aren't more than MAX_REVIEWS_PER_DAY notes due on any day
 date = all_dates[0]
 while True:
     next_date = date + datetime.timedelta(days=1)
