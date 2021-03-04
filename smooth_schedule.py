@@ -4,13 +4,13 @@ import datetime
 import sqlite3
 import sys
 
-from script import DB_COLUMNS
+from script import DB_COLUMNS, Note
 
 
 if __name__ == "__main__":
     DB_FILE = sys.argv[1]
     INBOX_FILEPATH = sys.argv[2]
-    MAX_REVIEWS_PER_DAY = sys.argv[3]
+    MAX_REVIEWS_PER_DAY = int(sys.argv[3])
 
 conn = sqlite3.connect(DB_FILE)
 cur = conn.cursor()
