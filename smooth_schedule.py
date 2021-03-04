@@ -38,10 +38,7 @@ def get_due_date(note):
 due_dates = {}
 for note in notes:
     due_on = get_due_date(note)
-    if due_on in due_dates:
-        due_dates[due_on] += [note]
-    else:
-        due_dates[due_on] = [note]
+    due_dates[due_on] = due_dates.get(due_on, []) + [note]
 
 today = datetime.date.today()
 all_dates = sorted(list(due_dates.keys()))
