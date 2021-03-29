@@ -313,10 +313,12 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 """ % (notes[-1].filepath, loc)).replace("\n", " ").strip()
                 p = subprocess.Popen(["emacsclient", "-e", elisp], stdout=subprocess.PIPE)
 
-        command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', '[q]uit'): ")
+        # "lg" stands for "last good" -- it automatically fills in the note
+        # number for the last note displayed and does a "good" on it
+        command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', 'lg', '[q]uit'): ")
         # FIXME: actually this still allows bad input like "1 goodish" so fix
         # that
-        if not re.match(r"\d+ (good|again)|quit|refresh|r|q", command):
+        if not re.match(r"\d+ (good|again)|quit|refresh|lg|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
         if command.strip() in ["r", "refresh"]:
@@ -324,12 +326,18 @@ def interact_loop(conn, no_review, initial_import, external_program):
         if command.strip() in ["q", "quit"]:
             break
         xs = command.strip().split()
-        note_number = int(xs[0])
+        if command == "lg":
+            note_number = len(notes)
+        else:
+            note_number = int(xs[0])
         if note_number not in [i+1 for i in range(len(notes))]:
             print("Not a valid note number", file=sys.stderr)
             continue
         note = notes[note_number-1]
-        action = xs[1]
+        if command == "lg":
+            action = "good"
+        else:
+            action = xs[1]
         # FIXME: this doesn't currently prevent people from reviewing a card
         # multiple times in the same session, which would just keep bumping the
         # card more and more. I think if a card has already been reviewed in a
