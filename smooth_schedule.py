@@ -49,7 +49,7 @@ date = all_dates[0]
 while True:
     next_date = date + datetime.timedelta(days=1)
     if date < today:
-        due_dates[today] += due_dates.get(date, [])
+        due_dates[today] = due_dates.get(today, []) + due_dates.get(date, [])
         due_dates[date] = []
     if len(due_dates.get(date, [])) > MAX_REVIEWS_PER_DAY:
         # Find the notes that have the most early due dates (according to the
