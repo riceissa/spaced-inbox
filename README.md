@@ -1,4 +1,12 @@
-# spaced inbox
+# Spaced inbox
+
+Have you ever had a physical notebook, a text file on your computer, or a blog
+in which you write your thoughts, but where you never look back on what you
+wrote?  Where after you write your thoughts, the next day you just keep on
+writing more unrelated thoughts without building on the previous days'
+thoughts?  Spaced inbox helps you with that problem by periodically showing you
+old notes you've written, gently reminding you to build on your previous
+thoughts.
 
 Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.org/z5aJUJcSbxuQxzHr2YvaY4cX5TuvLQT7r27Dz) with support for spaced repetition. How does it work?
 
