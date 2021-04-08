@@ -1,0 +1,4 @@
+/home/issa/projects/notes/inbox.txt
+/home/issa/projects/notes/ai-safety-inbox.txt
+/home/issa/projects/notes/questions.txt
+/home/issa/projects/notes/project-ideas.txt
