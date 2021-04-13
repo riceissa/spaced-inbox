@@ -49,6 +49,8 @@ thoughts.)
 
 I'm using gitbash as my terminal, with the graphical Emacs to edit files. I'm sure other setups are also possible but I haven't gotten around to trying them out.
 
+If you wish to run convenience scripts like `do.sh`, you will need to download sqlite3.exe from [this page](https://www.sqlite.org/download.html) (it's in sqlite-tools-win32-x86-3350400.zip) and put the executable in your PATH so that gitbash can find it (e.g. place it in `C:/Users/YOURNAME/bin`).
+
 ### If using Emacs
 
 After installing Emacs, in `~/.bash_profile` add:
