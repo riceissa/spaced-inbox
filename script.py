@@ -32,16 +32,17 @@ from collections import namedtuple
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
-              'filepath']
+              'inbox_name']
 Note = namedtuple('Note', DB_COLUMNS)
 
-INBOX_FILES = []
+INBOX_FILES = {}
 
 with open("inbox_files.txt", "r") as f:
     for line in f:
         if line.strip().startswith("#"):
             continue
-        INBOX_FILES.append(line.strip())
+        name, path = line.strip().split("\t")
+        INBOX_FILES[name] = path
 
 
 def get_notes_from_db(conn):
@@ -84,23 +85,24 @@ def main():
 
 
 def reload_db(conn, initial_import):
-    for inbox in INBOX_FILES:
+    for inbox_name in INBOX_FILES:
+        inbox_path = INBOX_FILES[inbox_name]
         cur = conn.cursor()
         fetched = cur.execute("""
             select {cols} from notes
             where
-                filepath = '{filepath}'
+                inbox_name = '{inbox_name}'
             """.format(
                 cols=", ".join(DB_COLUMNS),
-                filepath=inbox
+                inbox_name=inbox_name
             )
         ).fetchall()
         notes_db = [Note(*row) for row in fetched]
-        print("Importing new notes from {}... ".format(inbox),
+        print("Importing new notes from {}... ".format(inbox_path),
               file=sys.stderr, end="")
-        with open(inbox, "r") as f:
+        with open(inbox_path, "r") as f:
             current_inbox = parse_inbox(f)
-        update_notes_db(conn, inbox, notes_db, current_inbox,
+        update_notes_db(conn, inbox_name, notes_db, current_inbox,
                         initial_import=initial_import)
         print("done.", file=sys.stderr)
 
@@ -170,7 +172,7 @@ def _print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, inbox_filepath, notes_db, current_inbox,
+def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                     initial_import=False, context_based_identity=False):
     """
     Add new notes to db.
@@ -218,11 +220,11 @@ def update_notes_db(conn, inbox_filepath, notes_db, current_inbox,
                                           interval = ?,
                                           last_reviewed_on = ?,
                                           interval_anchor = ?,
-                                          filepath = ?
+                                          inbox_name = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 250, 50,
                        datetime.date.today(), datetime.date.today(),
-                       inbox_filepath, sha1sum))
+                       inbox_name, sha1sum))
         else:
             note_number += 1
             interval_anchor = datetime.date.today()
@@ -236,7 +238,7 @@ def update_notes_db(conn, inbox_filepath, notes_db, current_inbox,
                            line_number_end, ease_factor=250, interval=50,
                            last_reviewed_on=datetime.date.today(),
                            interval_anchor=interval_anchor,
-                           filepath=inbox_filepath))
+                           inbox_name=inbox_name))
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
@@ -282,7 +284,7 @@ def print_due_notes(notes):
         else:
             fragment = initial_fragment(note.note_text)
         print("%s. %s L%s-%s [good: %s, again: %s] %s"
-              % (i+1, note.filepath,
+              % (i+1, note.inbox_name,
                  note.line_number_start, note.line_number_end,
                  human_friendly_time(good_interval(note.interval,
                                                    note.ease_factor)),
@@ -310,7 +312,12 @@ def interact_loop(conn, no_review, initial_import, external_program):
                       (find-file "%s")
                       (goto-line %s)
                       (recenter-top-bottom 0))
-                """ % (notes[-1].filepath, loc)).replace("\n", " ").strip()
+                """ % (
+                    # since the db only stores the inbox name, we must look up
+                    # the filepath from INBOX_FILES
+                    INBOX_FILES[notes[-1].inbox_name],
+                    loc
+                )).replace("\n", " ").strip()
                 p = subprocess.Popen(["emacsclient", "-e", elisp], stdout=subprocess.PIPE)
 
         # "lg" stands for "last good" -- it automatically fills in the note

@@ -17,6 +17,6 @@ create table notes (
            last_reviewed_on date, then we might accidentally keep pushing
            certain cards out in the future without ever reviewing them). */
         interval_anchor date,
-        /* This is the filepath to the inbox text file */
-        filepath text
+        /* This is the shortname name for the inbox text file */
+        inbox_name text
 );
