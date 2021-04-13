@@ -1,4 +1,4 @@
-/home/issa/projects/notes/inbox.txt
-/home/issa/projects/notes/ai-safety-inbox.txt
-/home/issa/projects/notes/questions.txt
-/home/issa/projects/notes/project-ideas.txt
+inbox	/home/issa/projects/notes/inbox.txt
+ai-safety-inbox	/home/issa/projects/notes/ai-safety-inbox.txt
+questions	/home/issa/projects/notes/questions.txt
+project-ideas	/home/issa/projects/notes/project-ideas.txt
