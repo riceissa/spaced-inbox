@@ -53,12 +53,6 @@ If you wish to run convenience scripts like `do.sh`, you will need to download s
 
 ### If using Emacs
 
-After installing Emacs, in `~/.bash_profile` add:
-
-```bash
-alias emacsclient='winpty /c/Program\ Files/Emacs/x86_64/bin/emacsclientw'
-```
-
 Once starting Emacs, make sure to run `server-start`; this allows emacsclient to send elisp code to the existing Emacs instance.
 
 ## some helpful sql commands to poke around in the db
