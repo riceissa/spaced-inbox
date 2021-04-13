@@ -322,10 +322,16 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 """ % (
                     # since the db only stores the inbox name, we must look up
                     # the filepath from INBOX_FILES
-                    INBOX_FILES[notes[-1].inbox_name],
+                    INBOX_FILES[notes[-1].inbox_name].replace("\\", r"\\\\"),
                     loc
                 )).replace("\n", " ").strip()
-                p = subprocess.Popen(["emacsclient", "-e", elisp], stdout=subprocess.PIPE)
+                emacsclient = "emacsclient"
+                if os.name == "nt":
+                    # Python on Windows is dumb and can't detect gitbash
+                    # aliases so we have to get the full path of the executable
+                    emacsclient = "C:/Program Files/Emacs/x86_64/bin/emacsclientw"
+                p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
+
 
         # "lg" stands for "last good" -- it automatically fills in the note
         # number for the last note displayed and does a "good" on it
