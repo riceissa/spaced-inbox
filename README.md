@@ -45,6 +45,20 @@ There are two senses in which one might "use Anki":
 (Thanks to TheCedarPrince for prompting me with the questions that led to these
 thoughts.)
 
+## Setting up on Windows
+
+I'm using gitbash as my terminal, with the graphical Emacs to edit files. I'm sure other setups are also possible but I haven't gotten around to trying them out.
+
+### If using Emacs
+
+After installing Emacs, in `~/.bash_profile` add:
+
+```bash
+alias emacsclient='winpty /c/Program\ Files/Emacs/x86_64/bin/emacsclientw'
+```
+
+Once starting Emacs, make sure to run `server-start`; this allows emacsclient to send elisp code to the existing Emacs instance.
+
 ## some helpful sql commands to poke around in the db
 
 To find the notes that will be due first:
