@@ -9,7 +9,7 @@ from script import DB_COLUMNS, Note
 
 if __name__ == "__main__":
     DB_FILE = sys.argv[1]
-    INBOX_FILEPATH = sys.argv[2]
+    INBOX_NAME = sys.argv[2]
     MAX_REVIEWS_PER_DAY = int(sys.argv[3])
 
 conn = sqlite3.connect(DB_FILE)
@@ -17,11 +17,11 @@ cur = conn.cursor()
 fetched = cur.execute("""
     select {cols} from notes
     where
-        filepath = '{filepath}' and
+        inbox_name = '{inbox_name}' and
         interval >= 0
     """.format(
         cols=", ".join(DB_COLUMNS),
-        filepath=INBOX_FILEPATH
+        inbox_name=INBOX_NAME
     )
 ).fetchall()
 notes = [Note(*row) for row in fetched]
