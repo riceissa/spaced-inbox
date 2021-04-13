@@ -37,7 +37,7 @@ Note = namedtuple('Note', DB_COLUMNS)
 
 INBOX_FILES = {}
 
-with open("inbox_files.txt", "r") as f:
+with open("inbox_files.txt", "r", encoding="utf-8") as f:
     for line in f:
         if line.strip().startswith("#"):
             continue
@@ -81,7 +81,7 @@ def main():
                         action="store")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
-        with open("schema.sql", "r") as f:
+        with open("schema.sql", "r", encoding="utf-8") as f:
             conn = sqlite3.connect('data.db')
             c = conn.cursor()
             c.executescript(f.read())
@@ -107,7 +107,7 @@ def reload_db(conn, initial_import):
         notes_db = [Note(*row) for row in fetched]
         print("Importing new notes from {}... ".format(inbox_path),
               file=sys.stderr, end="")
-        with open(inbox_path, "r") as f:
+        with open(inbox_path, "r", encoding="utf-8") as f:
             current_inbox = parse_inbox(f)
         update_notes_db(conn, inbox_name, notes_db, current_inbox,
                         initial_import=initial_import)
