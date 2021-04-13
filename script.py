@@ -41,6 +41,13 @@ with open("inbox_files.txt", "r") as f:
     for line in f:
         if line.strip().startswith("#"):
             continue
+        # Why do we have both the name and path? This simplifies the situation
+        # if the inbox files get moved around (e.g. if you have two different
+        # computers). As long as inbox_files.txt gives the right path for the
+        # same inbox names, it doesn't matter that the inbox files keep moving
+        # around; the database doesn't need to know where the inbox files are
+        # located, so the database does not need to be updated each time files
+        # move around.
         name, path = line.strip().split("\t")
         INBOX_FILES[name] = path
 
