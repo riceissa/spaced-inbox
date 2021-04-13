@@ -51,7 +51,7 @@ I'm using gitbash as my terminal, with the graphical Emacs to edit files. I'm su
 
 If you wish to run convenience scripts like `do.sh`, you will need to download sqlite3.exe from [this page](https://www.sqlite.org/download.html) (it's in sqlite-tools-win32-x86-3350400.zip) and put the executable in your PATH so that gitbash can find it (e.g. place it in `C:/Users/YOURNAME/bin`).
 
-### If using Emacs
+## If using Emacs
 
 Once starting Emacs, make sure to run `server-start`; this allows emacsclient to send elisp code to the existing Emacs instance.
 
