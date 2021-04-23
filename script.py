@@ -11,6 +11,8 @@ import hashlib
 import subprocess
 from collections import namedtuple
 
+sys.stdout.reconfigure(encoding='utf-8')
+
 # TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
 # if i suddenly add all of my browser bookmarks as separate items in the inbox
 # file and then import using --initial-import, will that screw things up, or
