@@ -9,5 +9,5 @@
 
 ./smooth_schedule.py data.db inbox 5
 ./smooth_schedule.py data.db ai-safety-inbox 2
-./smooth_schedule.py data.db questions 2
-./smooth_schedule.py data.db project-ideas 2
+./smooth_schedule.py data.db questions 1
+./smooth_schedule.py data.db project-ideas 1
