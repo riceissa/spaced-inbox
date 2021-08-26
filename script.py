@@ -231,7 +231,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                                           interval_anchor = ?,
                                           inbox_name = ?
                          where sha1sum = ?""",
-                      (line_number_start, line_number_end, 250, 50,
+                      (line_number_start, line_number_end, 300, 60,
                        datetime.date.today(), datetime.date.today(),
                        inbox_name, sha1sum))
         else:
@@ -244,7 +244,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                       % (", ".join(DB_COLUMNS),
                          ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
-                           line_number_end, ease_factor=250, interval=50,
+                           line_number_end, ease_factor=300, interval=60,
                            last_reviewed_on=datetime.date.today(),
                            interval_anchor=interval_anchor,
                            inbox_name=inbox_name))
