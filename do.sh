@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo -n "Number of notes: "
+sqlite3 data.db 'select count(*) from notes where interval >= 0;'
+echo "====="
 python3 script.py --no-review
 echo "====="
 echo "Review load before smoothing:"
