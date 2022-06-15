@@ -13,6 +13,9 @@ from collections import namedtuple
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+# This value sets the initial interval in days.
+INITIAL_INTERVAL = 60
+
 # TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
 # if i suddenly add all of my browser bookmarks as separate items in the inbox
 # file and then import using --initial-import, will that screw things up, or
@@ -231,7 +234,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                                           interval_anchor = ?,
                                           inbox_name = ?
                          where sha1sum = ?""",
-                      (line_number_start, line_number_end, 300, 60,
+                      (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
                        datetime.date.today(), datetime.date.today(),
                        inbox_name, sha1sum))
         else:
@@ -244,7 +247,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                       % (", ".join(DB_COLUMNS),
                          ", ".join(["?"]*len(DB_COLUMNS))),
                       Note(sha1sum, note_text, line_number_start,
-                           line_number_end, ease_factor=300, interval=60,
+                           line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
                            last_reviewed_on=datetime.date.today(),
                            interval_anchor=interval_anchor,
                            inbox_name=inbox_name))
