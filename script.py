@@ -243,14 +243,18 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
             if initial_import:
                 interval_extra_offset = int(min(1, 100/inbox_size) * note_number)
                 interval_anchor += datetime.timedelta(days=interval_extra_offset)
-            c.execute("insert into notes (%s) values (%s)"
-                      % (", ".join(DB_COLUMNS),
-                         ", ".join(["?"]*len(DB_COLUMNS))),
-                      Note(sha1sum, note_text, line_number_start,
-                           line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
-                           last_reviewed_on=datetime.date.today(),
-                           interval_anchor=interval_anchor,
-                           inbox_name=inbox_name))
+            try:
+                c.execute("insert into notes (%s) values (%s)"
+                          % (", ".join(DB_COLUMNS),
+                             ", ".join(["?"]*len(DB_COLUMNS))),
+                          Note(sha1sum, note_text, line_number_start,
+                               line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
+                               last_reviewed_on=datetime.date.today(),
+                               interval_anchor=interval_anchor,
+                               inbox_name=inbox_name))
+            except sqlite3.IntegrityError:
+                print("Duplicate note text found!", inbox_name, note_text, file=sys.stderr)
+                sys.exit()
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
