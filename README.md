@@ -10,13 +10,40 @@ thoughts.
 
 Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.org/z5aJUJcSbxuQxzHr2YvaY4cX5TuvLQT7r27Dz) with support for spaced repetition. How does it work?
 
-1. You write your notes in a plain text file. Two blank lines, or a line containing at least three equals signs (and nothing else) like `======`, are interpreted as the beginning of a new note.
-2. You run `script.py --initial-import`. This imports your writing inbox into a database that manages the review schedule.
-3. Every day, you run `script.py`, both to import new notes into the database and to review notes that are due. The "review" consists of a list of notes that are due on that day, along with line numbers that tell you where in the file they are located. You visit the location, edit/delete/do nothing, then tell `script.py` that you've reviewed the note. This is like pressing "Good" or "Again" in Anki, and will modify the review interval in a spaced manner.
+1. You write your notes in a plain text file. Two blank lines, or a line
+   containing at least three equals signs (and nothing else) like `======`, are
+   interpreted as the beginning of a new note.
+2. You create a file called `inbox_files.txt` (see
+   [example](https://github.com/riceissa/spaced-inbox/blob/master/inbox_files.txt-example))
+   to tell the program where to find your notes file. (The first column of
+   `inbox_files.txt` is a short name you can give to your inbox file.)
+3. You run `script.py`. This imports your writing inbox into a database that
+   manages the review schedule.
+4. Every day, you run `script.py`, both to import new notes into the database
+   and to review notes that are due. The "review" consists of a single note
+   that is due on that day, along with line numbers that tell you where in the
+   file they are located. You visit the location using your text editor,
+   edit/delete/do nothing, then tell `script.py` that you've reviewed the note.
+   This is like pressing "Good" or "Again" in Anki, and will modify the review
+   interval in a spaced manner. You can keep running `script.py` to get more
+   notes to review, if you feel like it. There _is_ a concept of "dueness" so
+   eventually you will run out of notes to review, but you should not feel
+   obligated to keep reviewing. The spacing algorithm is designed so that even
+   if you stop reviewing for a long time, you will still get the notes that
+   feel most exciting to you (unlike in Anki where the oldest cards dominate
+   the review).
 
-That's it! There's no app or writing interface: you get to choose your favorite text editor, and write in whatever markup language you prefer. `script.py` does not modify your notes file in any way.
+That's it! There's no app or writing interface: you get to choose your favorite
+text editor, and write in whatever markup language you prefer. `script.py` does
+not modify your notes file in any way.
 
-The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days, 125\*2.5 = 313 days, and so on.
+The spacing algorithm that determines which notes are "due" is a simplified
+version of the one for
+[Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd)
+with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days,
+125\*2.5 = 313 days, and so on. However, among the "due" cards, there is more
+logic to pick ones that should feel the most exciting to you, rather than
+randomly picking among them or just showing you the card that is most overdue.
 
 ## Warning
 
