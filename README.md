@@ -22,7 +22,7 @@ Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.or
 4. Every day, you run `script.py`, both to import new notes into the database
    and to review notes that are due. The "review" consists of a single note
    that is due on that day, along with line numbers that tell you where in the
-   file they are located. You visit the location using your text editor,
+   file the note is located. You visit the location using your text editor,
    edit/delete/do nothing, then tell `script.py` that you've reviewed the note.
    This is like pressing "Good" or "Again" in Anki, and will modify the review
    interval in a spaced manner. You can keep running `script.py` to get more
