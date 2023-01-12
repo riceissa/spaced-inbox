@@ -15,7 +15,7 @@ from collections import namedtuple
 sys.stdout.reconfigure(encoding='utf-8')
 
 # This value sets the initial interval in days.
-INITIAL_INTERVAL = 60
+INITIAL_INTERVAL = 50
 
 # TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
 # if i suddenly add all of my browser bookmarks as separate items in the inbox
@@ -297,7 +297,7 @@ def get_recent_unreviewed_note(notes_db):
     for note in notes_db:
         days_since_created = (datetime.date.today() - yyyymmdd_to_date(note.created_on)).days
         if (note.interval > 0 and note.note_state == "just created" and
-            days_since_created >= 50 and days_since_created <= 100):
+            days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
             candidates.append(note)
     if not candidates:
         return None
@@ -308,7 +308,7 @@ def get_exciting_note(notes_db):
     weights = []
     for note in notes_db:
         days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
-        days_overdue = days_since_reviewed - 50 * 2.5**note.reviewed_count
+        days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
             candidates.append(note)
             # We allow any exciting and overdue note to be selected, but weight
@@ -325,7 +325,7 @@ def get_all_other_note(notes_db):
     weights = []
     for note in notes_db:
         days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
-        days_overdue = days_since_reviewed - 50 * 2.5**note.reviewed_count
+        days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
             weights.append(days_overdue**2)
