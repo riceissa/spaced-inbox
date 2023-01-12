@@ -305,24 +305,33 @@ def get_recent_unreviewed_note(notes_db):
 
 def get_exciting_note(notes_db):
     candidates = []
+    weights = []
     for note in notes_db:
         days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
-        if note.interval > 0 and note.note_state == "exciting" and days_since_reviewed > 50 * 2.5**note.reviewed_count:
+        days_overdue = days_since_reviewed - 50 * 2.5**note.reviewed_count
+        if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
             candidates.append(note)
+            # We allow any exciting and overdue note to be selected, but weight
+            # the probabilities so that the ones that are more overdue are more
+            # likely to be selected.
+            weights.append(days_overdue**2)
 
     if not candidates:
         return None
-    return random.choice(candidates)
+    return random.choices(candidates, weights, k=1)[0]
 
 def get_all_other_note(notes_db):
     candidates = []
+    weights = []
     for note in notes_db:
         days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
-        if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_since_reviewed > 50 * 2.5**note.reviewed_count:
+        days_overdue = days_since_reviewed - 50 * 2.5**note.reviewed_count
+        if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
+            weights.append(days_overdue**2)
     if not candidates:
         return None
-    return random.choice(candidates)
+    return random.choices(candidates, weights, k=1)[0]
 
 def print_due_notes(notes):
     n = len(notes)
