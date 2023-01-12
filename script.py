@@ -359,16 +359,17 @@ def interact_loop(conn, no_review, initial_import, external_program):
         if note is None:
             note = get_all_other_note(notes_db)
 
-
-
-        # notes = due_notes(notes_db)
-        if len(notes) == 0:
+        if note is None
             print("No notes are due")
             break
         else:
-            print_due_notes(notes)
+            # print_due_notes(notes)
+            fragment = initial_fragment(note.note_text)
+            print("%s L%s-%s %s" % (note.inbox_name,
+                                    note.line_number_start,
+                                    note.line_number_end, fragment))
             if external_program == "emacs":
-                loc = notes[-1].line_number_start
+                loc = note.line_number_start
                 elisp = ("""
                     (with-current-buffer
                         (window-buffer (selected-window))
@@ -378,7 +379,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 """ % (
                     # since the db only stores the inbox name, we must look up
                     # the filepath from INBOX_FILES
-                    INBOX_FILES[notes[-1].inbox_name].replace("\\", r"\\\\"),
+                    INBOX_FILES[note.inbox_name].replace("\\", r"\\\\"),
                     loc
                 )).replace("\n", " ").strip()
                 emacsclient = "emacsclient"
@@ -391,58 +392,40 @@ def interact_loop(conn, no_review, initial_import, external_program):
 
         # "lg" stands for "last good" -- it automatically fills in the note
         # number for the last note displayed and does a "good" on it
-        command = input("Enter a command (e.g. '1 good', '1 again', '[r]efresh', 'lg', '[q]uit'): ")
+        command = input("Enter a command ('[e]xciting', '[m]eh', '[c]ringe', '[t]axing', '[r]efresh', '[q]uit'): ")
         # FIXME: actually this still allows bad input like "1 goodish" so fix
         # that
-        if not re.match(r"\d+ (good|again)|quit|refresh|lg|r|q", command):
+        if not re.match(r"e|m|c|t|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
         if command.strip() in ["r", "refresh"]:
             continue
         if command.strip() in ["q", "quit"]:
             break
-        xs = command.strip().split()
-        if command == "lg":
-            note_number = len(notes)
-        else:
-            note_number = int(xs[0])
-        if note_number not in [i+1 for i in range(len(notes))]:
-            print("Not a valid note number", file=sys.stderr)
-            continue
-        note = notes[note_number-1]
-        if command == "lg":
-            action = "good"
-        else:
-            action = xs[1]
+
         # FIXME: this doesn't currently prevent people from reviewing a card
         # multiple times in the same session, which would just keep bumping the
         # card more and more. I think if a card has already been reviewed in a
         # session, we should say something like "This card was already
         # reviewed".
-        if action == "good":
-            c = conn.cursor()
-            new_interval = good_interval(note.interval, note.ease_factor)
-            c.execute("""update notes set interval = ?,
-                                          last_reviewed_on = ?,
-                                          interval_anchor = ?
-                         where sha1sum = ?""",
-                      (new_interval, datetime.date.today(), datetime.date.today(), note.sha1sum))
-            conn.commit()
-            print("You will next see this note in " +
-                  human_friendly_time(new_interval), file=sys.stderr)
-        if action == "again":
-            c = conn.cursor()
-            new_interval = again_interval(note.interval)
-            c.execute("""update notes set interval = ?,
+        command_to_state = {
+                'e': "exciting",
+                'm': "meh",
+                'c': "cringe",
+                't': "taxing",
+                }
+        c = conn.cursor()
+        new_interval = good_interval(note.interval, note.ease_factor)
+        c.execute("""update notes set interval = ?,
                                       last_reviewed_on = ?,
                                       interval_anchor = ?,
-                                      ease_factor = ?
-                         where sha1sum = ?""",
-                      (new_interval, datetime.date.today(), datetime.date.today(),
-                       int(max(130, note.ease_factor - 20)), note.sha1sum))
-            print("You will next see this note in " +
-                  human_friendly_time(new_interval), file=sys.stderr)
-            conn.commit()
+                                      reviewed_count = ?,
+                                      note_state = ?
+                     where sha1sum = ?""",
+                  (new_interval, datetime.date.today(), datetime.date.today(), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
+        conn.commit()
+        print("You will next see this note in " +
+              human_friendly_time(new_interval), file=sys.stderr)
 
 
 def sha1sum(string):
