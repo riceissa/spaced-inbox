@@ -284,8 +284,7 @@ def due_notes(notes_db):
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = (datetime.datetime.strptime(note.interval_anchor,
-                                               "%Y-%m-%d").date() +
+        due_date = (yyyymmdd_to_date(note.interval_anchor) +
                     datetime.timedelta(days=note.interval))
         if datetime.date.today() >= due_date:
             result.append(note)
@@ -296,7 +295,7 @@ def get_recent_unreviewed_note(notes_db):
     not yet been reviewed yet."""
     candidates = []
     for note in notes_db:
-        days_since_created = (datetime.date.today() - note.created_on).days
+        days_since_created = (datetime.date.today() - yyyymmdd_to_date(note.created_on)).days
         if (note.interval > 0 and note.note_state == "just created" and
             days_since_created >= 50 and days_since_created <= 100):
             candidates.append(note)
@@ -307,7 +306,7 @@ def get_recent_unreviewed_note(notes_db):
 def get_exciting_note(notes_db):
     candidates = []
     for note in notes_db:
-        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
         if note.interval > 0 and note.note_state == "exciting" and days_since_reviewed > 50 * 2.5**note.reviewed_count:
             candidates.append(note)
 
@@ -318,7 +317,7 @@ def get_exciting_note(notes_db):
 def get_all_other_note(notes_db):
     candidates = []
     for note in notes_db:
-        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_since_reviewed > 50 * 2.5**note.reviewed_count:
             candidates.append(note)
     if not candidates:
@@ -362,6 +361,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
         if rand < 0.5:
             print("Attempting to choose a recent unreviewed note...", file=sys.stderr)
             note = get_recent_unreviewed_note(notes_db)
+            print(note)
         if note is None and rand < 0.7:
             print("Attempting to choose an exciting note...", file=sys.stderr)
             note = get_exciting_note(notes_db)
@@ -375,9 +375,13 @@ def interact_loop(conn, no_review, initial_import, external_program):
         else:
             # print_due_notes(notes)
             fragment = initial_fragment(note.note_text)
-            print("%s L%s-%s %s" % (note.inbox_name,
+            print("%s L%s-%s I=%s S=%s count=%s %s" % (note.inbox_name,
                                     note.line_number_start,
-                                    note.line_number_end, fragment))
+                                    note.line_number_end,
+                                    note.interval,
+                                    note.note_state,
+                                    note.reviewed_count,
+                                    fragment))
             if external_program == "emacs":
                 loc = note.line_number_start
                 elisp = ("""
@@ -470,6 +474,9 @@ def human_friendly_time(days):
         return str(round(days / (365.25 / 12), 2)) + " months"
     else:
         return str(round(days / 365.25, 2)) + " years"
+
+def yyyymmdd_to_date(string):
+    return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
 if __name__ == "__main__":

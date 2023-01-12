@@ -17,7 +17,7 @@ Note = namedtuple('Note', ['sha1sum', 'note_text', 'line_number_start', 'line_nu
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-conn_old = sqlite3.connect('data.db')
+conn_old = sqlite3.connect('data-2023-01-12.db.bak')
 c_old = conn_old.cursor()
 
 conn_new = sqlite3.connect('data_new.db')
@@ -34,7 +34,9 @@ for row_ in fetched:
     # pdb.set_trace()
     # Guess using the interval; we find the smallest k such that
     # interval/2.5^k < 50.  Just solve for k.
-    if row.interval > 0:
+    if row.interval == 60 or row.interval == 50:
+        reviewed_count = 0
+    elif row.interval > 0:
         reviewed_count = max(0, ceil(log(row.interval/50)/log(2.5)))
     else:
         reviewed_count = 0
