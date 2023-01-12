@@ -6,6 +6,7 @@ import re
 import os
 import os.path
 import sys
+import random
 import sqlite3
 import hashlib
 import subprocess
@@ -37,7 +38,7 @@ INITIAL_INTERVAL = 60
 
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
-              'inbox_name']
+              'inbox_name', 'created_on', 'reviewed_count', 'note_state']
 Note = namedtuple('Note', DB_COLUMNS)
 
 INBOX_FILES = {}
@@ -253,7 +254,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                                interval_anchor=interval_anchor,
                                inbox_name=inbox_name))
             except sqlite3.IntegrityError:
-                print("Duplicate note text found!", inbox_name, note_text, file=sys.stderr)
+                print("Duplicate note text found! Please remove all duplicates and then re-import.", inbox_name, note_text, file=sys.stderr)
                 sys.exit()
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
@@ -284,6 +285,39 @@ def due_notes(notes_db):
             result.append(note)
     return result
 
+def get_recent_unreviewed_note(notes_db):
+    """Randomly select a note that was created in the last 50-100 days and has
+    not yet been reviewed yet."""
+    candidates = []
+    for note in notes_db:
+        days_since_created = (datetime.date.today() - note.created_on).days
+        if (note.interval > 0 and note.note_state == "just created" and
+            days_since_created >= 50 and days_since_created <= 100):
+            candidates.append(note)
+    if not candidates:
+        return None
+    return random.choice(candidates)
+
+def get_exciting_note(notes_db):
+    candidates = []
+    for note in notes_db:
+        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        if note.interval > 0 and note.note_state == "exciting" and days_since_reviewed > 50 * 2.5**note.reviewed_count:
+            candidates.append(note)
+
+    if not candidates:
+        return None
+    return random.choice(candidates)
+
+def get_all_other_note(notes_db):
+    candidates = []
+    for note in notes_db:
+        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_since_reviewed > 50 * 2.5**note.reviewed_count:
+            candidates.append(note)
+    if not candidates:
+        return None
+    return random.choice(candidates)
 
 def print_due_notes(notes):
     n = len(notes)
@@ -314,7 +348,20 @@ def interact_loop(conn, no_review, initial_import, external_program):
         notes_db = reload_db(conn, initial_import)
         if no_review:
             break
-        notes = due_notes(notes_db)
+
+        # Pick a note to review
+        note = None
+        rand = random.random()
+        if rand < 0.5:
+            note = get_recent_unreviewed_note(notes_db)
+        if note is None and rand < 0.7:
+            note = get_exciting_note(notes_db)
+        if note is None:
+            note = get_all_other_note(notes_db)
+
+
+
+        # notes = due_notes(notes_db)
         if len(notes) == 0:
             print("No notes are due")
             break

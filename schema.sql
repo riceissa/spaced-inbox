@@ -18,5 +18,26 @@ create table notes (
            certain cards out in the future without ever reviewing them). */
         interval_anchor date,
         /* This is the shortname name for the inbox text file */
-        inbox_name text
+        inbox_name text,
+
+        created_on date,
+
+        /* Number of times note has been reviewed; if a note is modified it is
+           considered a different note, so this is actually the number of times
+           a note has been "passed" on in reviews without modification */
+        reviewed_count integer,
+
+        /* Can be one of:
+           - "just created"
+           - "exciting" (want to keep thinking about this idea in the near
+                future and add to it, but can't think of anything to add in
+                this exact moment)
+           - "meh"
+           - "cringe"
+           - "taxing" (too cognitively taxing to read/think about right now)
+
+           The note state (except for "just created") also corresponds to the
+           response that was given to the note when the note was
+           last reviewed. */
+        note_state text
 );
