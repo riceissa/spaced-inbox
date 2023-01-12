@@ -18,6 +18,21 @@ That's it! There's no app or writing interface: you get to choose your favorite 
 
 The spacing algorithm is a simplified version of the one for [Anki/SM2](https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd) with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days, 125\*2.5 = 313 days, and so on.
 
+## Warning
+
+The spaced inbox program in this repo is a _research project_ designed
+specifically for myself. Eventually I do want to convert it into something that
+is easy to learn and use, but at the moment this is not the intention. In
+particular, updates to the code may make the program incompatible with older
+versions of the database, the interface or spacing algorithm can change at any
+time, and things are not documented very well in general.
+
+Nonetheless, I do want to help people use the program. So if you are stuck
+about how to use it or have a question about something, please open a
+[discussion
+topic](https://github.com/riceissa/spaced-inbox/discussions/new/choose) (or an
+[issue](https://github.com/riceissa/spaced-inbox/issues/new) for bug reports).
+
 ## Why not just use Anki?
 
 There are two senses in which one might "use Anki":
