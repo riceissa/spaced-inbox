@@ -369,7 +369,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
             print("Attempting to choose some other note...", file=sys.stderr)
             note = get_all_other_note(notes_db)
 
-        if note is None
+        if note is None:
             print("No notes are due")
             break
         else:
