@@ -394,14 +394,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
             break
         else:
             # print_due_notes(notes)
-            fragment = initial_fragment(note.note_text)
-            print("%s L%s-%s I=%s S=%s count=%s %s" % (note.inbox_name,
-                                    note.line_number_start,
-                                    note.line_number_end,
-                                    note.interval,
-                                    note.note_state,
-                                    note.reviewed_count,
-                                    fragment))
+            print(note_repr(note))
             if external_program == "emacs":
                 loc = note.line_number_start
                 elisp = ("""
@@ -497,6 +490,21 @@ def human_friendly_time(days):
 
 def yyyymmdd_to_date(string):
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
+
+
+def note_repr(note):
+    fragment = initial_fragment(note.note_text)
+    string = "Note(%s L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on==%s last_reviewed_on=%s %s)" % (note.inbox_name,
+            note.line_number_start,
+            note.line_number_end,
+            note.interval,
+            note.ease_factor,
+            note.note_state,
+            note.reviewed_count,
+            note.created_on,
+            note.last_reviewed_on,
+            fragment)
+    return string
 
 
 if __name__ == "__main__":
