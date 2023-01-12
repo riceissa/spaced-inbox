@@ -129,6 +129,8 @@ See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/b
 
 - notes identity is very crude right now: we just check the sha1 hash, so any modification to a note will turn it into a note with different identity, which means the review schedule will reset. I think there's a decent chance this is actually ok: the notes you modify are the notes you are actually engaging with, so you actually want them around more frequently. (Unfortunately, I don't think I will find out if it's fine [anytime soon](https://wiki.issarice.com/wiki/Iteration_cadence_for_spaced_repetition_experiments).)
 
+  UPDATE: i think this turned out to work pretty well.
+
 ## License
 
 CC0. See `LICENSE` for details.
