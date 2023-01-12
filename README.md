@@ -29,9 +29,9 @@ Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.or
    notes to review, if you feel like it. There _is_ a concept of "dueness" so
    eventually you will run out of notes to review, but you should not feel
    obligated to keep reviewing. The spacing algorithm is designed so that even
-   if you stop reviewing for a long time, you will still get the notes that
-   feel most exciting to you (unlike in Anki where the oldest cards dominate
-   the review).
+   if you stop reviewing for a long time, or you only review a couple notes per
+   day, you will still get the notes that feel most exciting to you (unlike in
+   Anki where the oldest cards dominate the review).
 
 That's it! There's no app or writing interface: you get to choose your favorite
 text editor, and write in whatever markup language you prefer. `script.py` does
