@@ -494,7 +494,7 @@ def yyyymmdd_to_date(string):
 
 def note_repr(note):
     fragment = initial_fragment(note.note_text)
-    string = "Note(%s L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on==%s last_reviewed_on=%s %s)" % (note.inbox_name,
+    string = "Note(%s L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on=%s last_reviewed_on=%s %s)" % (note.inbox_name,
             note.line_number_start,
             note.line_number_end,
             note.interval,
