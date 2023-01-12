@@ -35,6 +35,7 @@ create table notes (
            - "meh"
            - "cringe"
            - "taxing" (too cognitively taxing to read/think about right now)
+           - "lol" (funny/amusing)
 
            The note state (except for "just created") also corresponds to the
            response that was given to the note when the note was

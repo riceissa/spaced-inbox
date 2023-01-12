@@ -417,12 +417,8 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
 
 
-        # "lg" stands for "last good" -- it automatically fills in the note
-        # number for the last note displayed and does a "good" on it
-        command = input("Enter a command ('[e]xciting', '[m]eh', '[c]ringe', '[t]axing', '[r]efresh', '[q]uit'): ")
-        # FIXME: actually this still allows bad input like "1 goodish" so fix
-        # that
-        if not re.match(r"e|m|c|t|r|q", command):
+        command = input("Enter a command ('[e]xciting', '[m]eh', '[c]ringe', '[t]axing', '[l]ol', '[r]efresh', '[q]uit'): ")
+        if not re.match(r"e|m|c|t|l|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
         if command.strip() in ["r", "refresh"]:
@@ -430,16 +426,12 @@ def interact_loop(conn, no_review, initial_import, external_program):
         if command.strip() in ["q", "quit"]:
             break
 
-        # FIXME: this doesn't currently prevent people from reviewing a card
-        # multiple times in the same session, which would just keep bumping the
-        # card more and more. I think if a card has already been reviewed in a
-        # session, we should say something like "This card was already
-        # reviewed".
         command_to_state = {
                 'e': "exciting",
                 'm': "meh",
                 'c': "cringe",
                 't': "taxing",
+                'l': "lol",
                 }
         c = conn.cursor()
         new_interval = good_interval(note.interval, note.ease_factor)
