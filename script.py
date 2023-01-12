@@ -358,11 +358,15 @@ def interact_loop(conn, no_review, initial_import, external_program):
         # Pick a note to review
         note = None
         rand = random.random()
+        print("random number =", rand, file=sys.stderr)
         if rand < 0.5:
+            print("Attempting to choose a recent unreviewed note...", file=sys.stderr)
             note = get_recent_unreviewed_note(notes_db)
         if note is None and rand < 0.7:
+            print("Attempting to choose an exciting note...", file=sys.stderr)
             note = get_exciting_note(notes_db)
         if note is None:
+            print("Attempting to choose some other note...", file=sys.stderr)
             note = get_all_other_note(notes_db)
 
         if note is None
