@@ -233,12 +233,15 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                                           interval = ?,
                                           last_reviewed_on = ?,
                                           interval_anchor = ?,
-                                          inbox_name = ?
+                                          inbox_name = ?,
+                                          reviewed_count = ?,
+                                          note_state = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
                        datetime.date.today(), datetime.date.today(),
-                       inbox_name, sha1sum))
+                       inbox_name, 0, "just created", sha1sum))
         else:
+            # The note content is new.
             note_number += 1
             interval_anchor = datetime.date.today()
             if initial_import:
@@ -252,7 +255,10 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
                                line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
                                last_reviewed_on=datetime.date.today(),
                                interval_anchor=interval_anchor,
-                               inbox_name=inbox_name))
+                               inbox_name=inbox_name,
+                               created_on=datetime.date.today(),
+                               reviewed_count=0,
+                               note_state="just created"))
             except sqlite3.IntegrityError:
                 print("Duplicate note text found! Please remove all duplicates and then re-import.", inbox_name, note_text, file=sys.stderr)
                 sys.exit()
