@@ -62,6 +62,12 @@ topic](https://github.com/riceissa/spaced-inbox/discussions/new/choose) (or an
 
 ## Why not just use Anki?
 
+(Note as of 2023-01-12: I've significantly changed the note-selection algorithm
+during reviews, so I think using Anki would give a significantly different and
+worse-in-my-opinion experience. That's the most important reason to not use
+Anki, in my opinion. But I'll leave the text below, which were my old reasons
+for not using Anki.)
+
 There are two senses in which one might "use Anki":
 
 1. Add notes directly to Anki using the Anki interface, and review using Anki:
