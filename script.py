@@ -295,6 +295,10 @@ def get_recent_unreviewed_note(notes_db):
     not yet been reviewed yet."""
     candidates = []
     for note in notes_db:
+        # FIXME: I suspect using days_since_created here actually causes a
+        # problem, where even if a note has been reviewed, it will still keep
+        # showing up in reviews. So I need to add a check for when the note was
+        # last reviewed as well, I think.
         days_since_created = (datetime.date.today() - yyyymmdd_to_date(note.created_on)).days
         if (note.interval > 0 and note.note_state == "just created" and
             days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
@@ -314,11 +318,17 @@ def get_exciting_note(notes_db):
             # We allow any exciting and overdue note to be selected, but weight
             # the probabilities so that the ones that are more overdue are more
             # likely to be selected.
+            # TODO: I need to learn more about what sensible weights for this
+            # are.
             weights.append(days_overdue**2)
 
     if not candidates:
         return None
     return random.choices(candidates, weights, k=1)[0]
+
+# TODO: I only deal with "just created" and "exciting" notes specially. But
+# there's support for more reactions to notes during review. Eventually, I'd
+# like to incorporate these other reactions into the review algo as well.
 
 def get_all_other_note(notes_db):
     candidates = []
@@ -328,6 +338,8 @@ def get_all_other_note(notes_db):
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
+            # TODO: I need to learn more about what sensible weights for this
+            # are.
             weights.append(days_overdue**2)
     if not candidates:
         return None
@@ -362,6 +374,19 @@ def interact_loop(conn, no_review, initial_import, external_program):
         notes_db = reload_db(conn, initial_import)
         if no_review:
             break
+
+
+        num_notes = 0
+        num_due_notes = 0
+        for note in notes_db:
+            if note.interval > 0:
+                num_notes += 1
+                days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
+                days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
+                if days_overdue > 0:
+                    num_due_notes += 1
+        print("Number of notes:", num_notes)
+        print("Number of notes that are due:", num_due_notes)
 
         # Pick a note to review
         note = None
@@ -417,7 +442,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
                 p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
 
 
-        command = input("Enter a command ('[e]xciting', '[m]eh', '[c]ringe', '[t]axing', '[l]ol', '[r]efresh', '[q]uit'): ")
+        command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]efresh', '[q]uit'): ")
         if not re.match(r"e|m|c|t|l|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
@@ -428,9 +453,11 @@ def interact_loop(conn, no_review, initial_import, external_program):
 
         command_to_state = {
                 'e': "exciting",
+                'i': "interesting",
                 'm': "meh",
                 'c': "cringe",
                 't': "taxing",
+                'y': "yeah",
                 'l': "lol",
                 }
         c = conn.cursor()
