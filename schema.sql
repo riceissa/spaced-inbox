@@ -32,13 +32,28 @@ create table notes (
            - "exciting" (want to keep thinking about this idea in the near
                 future and add to it, but can't think of anything to add in
                 this exact moment)
+           - "interesting"
            - "meh"
            - "cringe"
            - "taxing" (too cognitively taxing to read/think about right now)
+           - "yeah" (agreement)
            - "lol" (funny/amusing)
 
            The note state (except for "just created") also corresponds to the
            response that was given to the note when the note was
-           last reviewed. */
+           last reviewed.
+
+           The responses are intended to mimic the kinds of responses one would
+           give upon reading a chat message from a friend... you would respond
+           saying "yeah" or "that's cool" or whatever.  If you have a more
+           detailed response, of course you can just edit the note! It's your
+           writing inbox.  This "response as chat message" idea seems like
+           a better way to conceive of inbox responses than e.g. Anki's
+           Easy/Good/Hard/Again.  But I'm still actively thinking of
+           what the correct "primitives" are or "how to conceptualize
+           responses".  For more, see these links:
+           - https://wiki.issarice.com/wiki/Interaction_reversal_between_knowledge-to-be-memorized_and_ideas-to-be-developed
+           - https://wiki.issarice.com/wiki/Mapping_mental_motions_to_parts_of_a_spaced_repetition_algorithm
+         */
         note_state text
 );
