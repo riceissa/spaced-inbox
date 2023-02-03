@@ -443,7 +443,7 @@ def interact_loop(conn, no_review, initial_import, external_program):
 
 
         command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]eroll', '[q]uit'): ")
-        if not re.match(r"e|m|c|t|l|r|q", command):
+        if not re.match(r"e|i|m|c|t|y|l|r|q", command):
             print("Not a valid command", file=sys.stderr)
             continue
         if command.strip() in ["r", "refresh", "reroll"]:
