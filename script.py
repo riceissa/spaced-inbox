@@ -387,6 +387,11 @@ def interact_loop(conn, no_review, initial_import, external_program):
                     num_due_notes += 1
         print("Number of notes:", num_notes)
         print("Number of notes that are due:", num_due_notes)
+        if not os.path.isfile("review-load.csv"):
+            with open("review-load.csv", "w", encoding="utf-8") as review_load_file:
+                review_load_file.write("timestamp,num_notes,num_due_notes\n")
+        with open("review-load.csv", "a", encoding="utf-8") as review_load_file:
+            review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
 
         # Pick a note to review
         note = None
