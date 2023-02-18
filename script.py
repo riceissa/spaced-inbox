@@ -17,19 +17,13 @@ sys.stdout.reconfigure(encoding='utf-8')
 # This value sets the initial interval in days.
 INITIAL_INTERVAL = 50
 
-# TODO: make sure that the --initial-import flag works on a non-empty db. e.g.
-# if i suddenly add all of my browser bookmarks as separate items in the inbox
-# file and then import using --initial-import, will that screw things up, or
-# will it work as expected? If I can get this to work, it will be very
-# convenient as I can keep growing my inbox/adding more "streams" to it by
-# bulk-adding followed by incremental updates.
-# A related problem: if i do an initial import from one source, then do initial
-# import from a different source, that might mean doubling up on some of the
-# days (if the two imports are done close in time), so it basically doubles my
-# workload for those days. it might be good to check in the db first to figure
-# out which days in the next 300 days or whatever has the least amount of work,
-# then start by putting notes in those days, and gradually work up to the days
-# with more workload.
+# TODO: one thing that smooth.sh did that the new-as-of-January-2023 version
+# doesn't do is having different quotas for the different inbox text files. If
+# I do a large import of a new "stream" like browser bookmarks or something,
+# then the reviews will (after 50 days) probably get dominated by these browser
+# bookmarks. There should be some way to be like "limit browser bookmarks to at
+# most 1% of all reviews" or something.  For now this hasn't been a problem for
+# me, but it is something I will probably want to handle at some point.
 
 # TODO: i am realizing that i often purposely don't fix some typos on boring
 # notes because i reason that if i *do* fix them then that will reset the
@@ -67,11 +61,6 @@ def get_notes_from_db(conn):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--initial-import",
-                        help=("Uniformly distribute new notes between "
-                              "days 50-150 rather than having everything "
-                              "due on day 50"),
-                        action="store_true")
     # The following flag is useful if you just want to import new notes as a
     # cronjob or something, and don't want to get trapped in the interact loop.
     parser.add_argument("--no-review",
@@ -81,9 +70,7 @@ def main():
                         action="store_true")
     parser.add_argument("--external-program",
                         help=("External program that can be used to do the "
-                              "reviews. Currently only emacs is supported (to use "
-                              "emacs, keep your inbox file as the current buffer, "
-                              "then run this script with this argument)."),
+                              "reviews. Currently only emacs is supported."),
                         action="store")
     args = parser.parse_args()
     if not os.path.isfile("data.db"):
@@ -94,10 +81,10 @@ def main():
     else:
         conn = sqlite3.connect('data.db')
 
-    interact_loop(conn, args.no_review, args.initial_import, args.external_program)
+    interact_loop(conn, args.no_review, args.external_program)
 
 
-def reload_db(conn, initial_import):
+def reload_db(conn):
     for inbox_name in INBOX_FILES:
         inbox_path = INBOX_FILES[inbox_name]
         cur = conn.cursor()
@@ -115,8 +102,7 @@ def reload_db(conn, initial_import):
               file=sys.stderr, end="")
         with open(inbox_path, "r", encoding="utf-8") as f:
             current_inbox = parse_inbox(f)
-        update_notes_db(conn, inbox_name, notes_db, current_inbox,
-                        initial_import=initial_import)
+        update_notes_db(conn, inbox_name, notes_db, current_inbox)
         print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
@@ -185,31 +171,11 @@ def _print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, inbox_name, notes_db, current_inbox,
-                    initial_import=False, context_based_identity=False):
+def update_notes_db(conn, inbox_name, notes_db, current_inbox):
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
-
-    If initial_import is true, then import as if a large number of notes are
-    being added at once (such as the first time a notes file is imported). This
-    tries to even out the review load so that you don't have like 100 notes to
-    review on the 50th day (the default initial interval after importing).
-    Specifically, distribute the cards uniformly between days 50 and 150. e.g.
-    if you have 300 cards, then this will mean 3 cards per day on days 50-150
-    from the day you import (assuming you don't import any more cards in that
-    time period), rather than suddenly getting 300 cards on day 50.
-
-    If context_based_identity is true, then identify notes using the
-    surrounding context, even if the hashes do not match. For example, if the
-    notes file used to have the hash sequence 1111, 2222, 3333, but now it has
-    the hash sequence 1111, 4444, 3333, using context_based_identity would say
-    the note with hash 2222 was modified to the note with hash 4444 (i.e. they
-    are the same note, but the content changed), whereas without
-    context_based_identity, these would be seen as different notes (i.e. the
-    note with hash 2222 was removed, and the note with hash 4444 was added,
-    coincidentally in the same spot in the file). This makes a difference when
-    scheduling the note review."""
+    """
     c = conn.cursor()
     db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
@@ -244,9 +210,6 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox,
             # The note content is new.
             note_number += 1
             interval_anchor = datetime.date.today()
-            if initial_import:
-                interval_extra_offset = int(min(1, 100/inbox_size) * note_number)
-                interval_anchor += datetime.timedelta(days=interval_extra_offset)
             try:
                 c.execute("insert into notes (%s) values (%s)"
                           % (", ".join(DB_COLUMNS),
@@ -345,37 +308,13 @@ def get_all_other_note(notes_db):
         return None
     return random.choices(candidates, weights, k=1)[0]
 
-def print_due_notes(notes):
-    n = len(notes)
-    for i, note in enumerate(notes):
-        if i == n-1:
-            # The motivation here is the following: it's way simpler
-            # to review items using the printed output rather than
-            # having to change windows to the text editor, manually
-            # type the line, then review it there. If no editing needs
-            # to take place, it's better to see more of the final note
-            # so that you can just do "n good".
-            print("===================================================")
-            fragment = initial_fragment(note.note_text, 120)
-        else:
-            fragment = initial_fragment(note.note_text)
-        print("%s. %s L%s-%s [good: %s, again: %s] %s"
-              % (i+1, note.inbox_name,
-                 note.line_number_start, note.line_number_end,
-                 human_friendly_time(good_interval(note.interval,
-                                                   note.ease_factor)),
-                 human_friendly_time(again_interval(note.interval)),
-                 fragment))
 
-
-def interact_loop(conn, no_review, initial_import, external_program):
+def interact_loop(conn, no_review, external_program):
     while True:
         clear_screen()
-        notes_db = reload_db(conn, initial_import)
+        notes_db = reload_db(conn)
         if no_review:
             break
-
-
         num_notes = 0
         num_due_notes = 0
         for note in notes_db:
@@ -423,7 +362,6 @@ def interact_loop(conn, no_review, initial_import, external_program):
             print("No notes are due")
             break
         else:
-            # print_due_notes(notes)
             print(note_repr(note))
             if external_program == "emacs":
                 loc = note.line_number_start
