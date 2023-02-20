@@ -24,6 +24,12 @@ INITIAL_INTERVAL = 50
 # bookmarks. There should be some way to be like "limit browser bookmarks to at
 # most 1% of all reviews" or something.  For now this hasn't been a problem for
 # me, but it is something I will probably want to handle at some point.
+# I notice that I want to specify weights using different methods. For
+# example, with something like browser bookmarks, i want to say "don't make
+# this thing dominate the reviews". but i may also want to say something like
+# "github projects ideas repo notes should get a bit of penalty because they
+# tend to be boring".  A bit thing to keep in mind that some inbox files
+# can contain WAY more notes than some others.
 
 # TODO: i am realizing that i often purposely don't fix some typos on boring
 # notes because i reason that if i *do* fix them then that will reset the
