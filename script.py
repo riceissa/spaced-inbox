@@ -308,7 +308,10 @@ def get_all_other_note(notes_db):
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
             # TODO: I need to learn more about what sensible weights for this
-            # are.
+            # are.  For example, maybe if a note has a longer interval then
+            # it can be further delayed because it's already been so long
+            # since you last saw the note.  So the weight should possibly
+            # containt some percentage of the interval.
             weights.append(days_overdue**2)
     if not candidates:
         return None
