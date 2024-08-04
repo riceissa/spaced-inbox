@@ -390,7 +390,7 @@ def interact_loop(conn, no_review, external_program):
                 if os.name == "nt":
                     # Python on Windows is dumb and can't detect gitbash
                     # aliases so we have to get the full path of the executable
-                    emacsclient = "C:/Program Files/Emacs/emacs-29.2/bin/emacsclientw"
+                    emacsclient = "C:/Program Files/Emacs/emacs-29.4/bin/emacsclientw"
                 p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
 
 
