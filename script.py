@@ -19,7 +19,7 @@ sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 sys.stderr.reconfigure(encoding='utf-8')  # type: ignore
 
 # This value sets the initial interval in days.
-INITIAL_INTERVAL = 50
+INITIAL_INTERVAL: int = 50
 
 # TODO: one thing that smooth.sh did that the new-as-of-January-2023 version
 # doesn't do is having different quotas for the different inbox text files. If
@@ -40,10 +40,9 @@ INITIAL_INTERVAL = 50
 # review schedule to 50 days, which i don't want. maybe there should be some
 # way to make trivial changes without affecting the review schedule.
 
-# DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-#               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
-#               'inbox_name', 'created_on', 'reviewed_count', 'note_state']
-# Note = namedtuple('Note', DB_COLUMNS)
+DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
+              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
+              'inbox_name', 'created_on', 'reviewed_count', 'note_state']
 
 @dataclass
 class Note:
@@ -60,7 +59,7 @@ class Note:
     reviewed_count: int
     note_state: str
 
-INBOX_FILE = None
+INBOX_FILE: str | None = None
 
 config_file = "inbox_file.txt"
 if Path(config_file).exists():
@@ -88,6 +87,7 @@ if not INBOX_FILE:
           file=sys.stderr)
     sys.exit()
 
+assert isinstance(INBOX_FILE, str)
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
     c = conn.cursor()
@@ -122,25 +122,19 @@ def main() -> None:
 
 
 def reload_db(conn: Connection) -> list[Note]:
-    for inbox_name in INBOX_FILES:
-        inbox_path = INBOX_FILES[inbox_name]
-        cur = conn.cursor()
-        fetched = cur.execute("""
-            select {cols} from notes
-            where
-                inbox_name = '{inbox_name}'
-            """.format(
-                cols=", ".join(DB_COLUMNS),
-                inbox_name=inbox_name
-            )
-        ).fetchall()
-        notes_db = [Note(*row) for row in fetched]
-        print("Importing new notes from {}... ".format(inbox_path),
-              file=sys.stderr, end="")
-        with open(inbox_path, "r", encoding="utf-8") as f:
-            current_inbox = parse_inbox(f)
-        update_notes_db(conn, inbox_name, notes_db, current_inbox)
-        print("done.", file=sys.stderr)
+    inbox_path = INBOX_FILE
+    cur = conn.cursor()
+    fetched = cur.execute("""
+        select {cols} from notes
+        """.format(cols=", ".join(DB_COLUMNS),)
+    ).fetchall()
+    notes_db = [Note(*row) for row in fetched]
+    print("Importing new notes from {}... ".format(inbox_path),
+          file=sys.stderr, end="")
+    with open(inbox_path, "r", encoding="utf-8") as f:
+        current_inbox = parse_inbox(f)
+    update_notes_db(conn, inbox_name, notes_db, current_inbox)
+    print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
