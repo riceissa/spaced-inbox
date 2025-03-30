@@ -186,22 +186,34 @@ def main() -> None:
     else:
         conn = sqlite3.connect('data.db')
 
-    interact_loop(conn)
+    if args.number:
+        notes_from_db = reload_db(conn, log_level=0)
+        note: Note | None = pick_note_to_review(notes_from_db, log_level=0)
+        if note:
+            print(note.line_number_start)
+        else:
+            print(-1)
+    elif args.compile:
+        pass
+    else:
+        interact_loop(conn)
 
 
-def reload_db(conn: Connection) -> list[Note]:
+def reload_db(conn: Connection, log_level=1) -> list[Note]:
     cur = conn.cursor()
     fetched = cur.execute("""
         select {cols} from notes
         """.format(cols=", ".join(DB_COLUMNS),)
     ).fetchall()
     notes_db = [note_from_db_row(row) for row in fetched]
-    print("Importing new notes from {}... ".format(INBOX_FILE),
-          file=sys.stderr, end="")
+    if log_level > 0:
+        print("Importing new notes from {}... ".format(INBOX_FILE),
+              file=sys.stderr, end="")
     with open(INBOX_FILE, "r", encoding="utf-8") as f:
         current_inbox = parse_inbox(f)
-    update_notes_db(conn, notes_db, current_inbox)
-    print("done.", file=sys.stderr)
+    update_notes_db(conn, notes_db, current_inbox, log_level)
+    if log_level > 0:
+        print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
@@ -269,7 +281,7 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[str, str, int, int]]) -> None:
+def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[str, str, int, int]], log_level=1) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -323,7 +335,8 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                 print("Duplicate note text found! Please remove all duplicates and then re-import.", note_text, file=sys.stderr)
                 sys.exit()
     conn.commit()
-    print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
+    if log_level > 0:
+        print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
     # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(sha1sum for (sha1sum, _, _, _) in current_inbox)
@@ -334,8 +347,9 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
             c.execute("update notes set interval = -1 where sha1sum = ?",
                       (note.sha1sum,))
     conn.commit()
-    print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr,
-          end="")
+    if log_level > 0:
+        print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr,
+              end="")
 
 
 def due_notes(notes_db: list[Note]) -> list[Note]:
@@ -415,34 +429,44 @@ def get_all_other_note(notes_db: list[Note]) -> Note | None:
         return None
     return random.choices(candidates, weights, k=1)[0]
 
-def pick_note_to_review(notes: list[Note]) -> Note | None:
+def pick_note_to_review(notes: list[Note], log_level=1) -> Note | None:
     note: Note | None = None
     rand = random.random()
-    print("random number =", rand, file=sys.stderr)
+    if log_level > 0:
+        print("random number =", rand, file=sys.stderr)
     if rand < 0.5:
-        print("Attempting to choose a recent unreviewed note...",
-              end="", file=sys.stderr)
+        if log_level > 0:
+            print("Attempting to choose a recent unreviewed note...",
+                  end="", file=sys.stderr)
         note = get_recent_unreviewed_note(notes)
         if note is None:
-            print("failed.", file=sys.stderr)
+            if log_level > 0:
+                print("failed.", file=sys.stderr)
         else:
-            print("success.", file=sys.stderr)
+            if log_level > 0:
+                print("success.", file=sys.stderr)
     if note is None and rand < 0.7:
-        print("Attempting to choose an exciting note...", end="",
-              file=sys.stderr)
+        if log_level > 0:
+            print("Attempting to choose an exciting note...", end="",
+                  file=sys.stderr)
         note = get_exciting_note(notes)
         if note is None:
-            print("failed.", file=sys.stderr)
+            if log_level > 0:
+                print("failed.", file=sys.stderr)
         else:
-            print("success.", file=sys.stderr)
+            if log_level > 0:
+                print("success.", file=sys.stderr)
     if note is None:
-        print("Attempting to choose some other note...", end="",
-              file=sys.stderr)
+        if log_level > 0:
+            print("Attempting to choose some other note...", end="",
+                  file=sys.stderr)
         note = get_all_other_note(notes)
         if note is None:
-            print("failed.", file=sys.stderr)
+            if log_level > 0:
+                print("failed.", file=sys.stderr)
         else:
-            print("success.", file=sys.stderr)
+            if log_level > 0:
+                print("success.", file=sys.stderr)
     return note
 
 def calc_stats(notes: list[Note]) -> tuple[int, int]:
@@ -470,13 +494,13 @@ def interact_loop(conn: Connection) -> None:
     external_program = ""
     while True:
         # clear_screen()
-        notes_db = reload_db(conn)
-        num_notes, num_due_notes = calc_stats(notes_db)
+        notes_from_db = reload_db(conn)
+        num_notes, num_due_notes = calc_stats(notes_from_db)
         print("Number of notes:", num_notes)
         print("Number of notes that are due:", num_due_notes)
         record_review_load(num_notes, num_due_notes)
 
-        note: Note | None = pick_note_to_review(notes_db)
+        note: Note | None = pick_note_to_review(notes_from_db)
 
         if note is None:
             print("No notes are due")
