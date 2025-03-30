@@ -206,7 +206,11 @@ def main() -> None:
             line_fragment = initial_fragment(note.note_text)
             print(f"{INBOX_FILE}:{line_number}:{column_number}:{line_fragment}")
     else:
-        interact_loop(conn)
+        notes_from_db = reload_db(conn)
+        num_notes, num_due_notes = calc_stats(notes_from_db)
+        print("Number of notes:", num_notes)
+        print("Number of notes that are due:", num_due_notes)
+        record_review_load(num_notes, num_due_notes)
 
 
 def reload_db(conn: Connection, log_level=1) -> list[Note]:
@@ -503,15 +507,8 @@ def interact_loop(conn: Connection) -> None:
     no_review = False
     external_program = ""
     while True:
-        # clear_screen()
-        notes_from_db = reload_db(conn)
-        num_notes, num_due_notes = calc_stats(notes_from_db)
-        print("Number of notes:", num_notes)
-        print("Number of notes that are due:", num_due_notes)
-        record_review_load(num_notes, num_due_notes)
 
-        note: Note | None = pick_note_to_review(notes_from_db)
-
+        note: Note | None = None
         if note is None:
             print("No notes are due")
             break
