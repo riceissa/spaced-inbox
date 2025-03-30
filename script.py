@@ -43,7 +43,7 @@ INITIAL_INTERVAL: int = 50
 
 DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
-              'inbox_name', 'created_on', 'reviewed_count', 'note_state']
+              'created_on', 'reviewed_count', 'note_state']
 
 @dataclass
 class Note:
@@ -55,12 +55,25 @@ class Note:
     interval: int
     last_reviewed_on: datetime.date
     interval_anchor: datetime.date
-    inbox_name: None  # deprecated field; going to remove at some point
     created_on: datetime.date
     reviewed_count: int
     note_state: str
 
-    def to_tuple(self):
+    def __repr__(self) -> str:
+        fragment = initial_fragment(self.note_text)
+        string = "Note(L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on=%s last_reviewed_on=%s %s)" % (
+                self.line_number_start,
+                self.line_number_end,
+                self.interval,
+                self.ease_factor,
+                self.note_state,
+                self.reviewed_count,
+                self.created_on,
+                self.last_reviewed_on,
+                fragment)
+        return string
+
+    def to_db_row(self):
         return (
             self.sha1sum,
             self.note_text,
@@ -68,10 +81,9 @@ class Note:
             self.line_number_end,
             self.ease_factor,
             self.interval,
-            self.last_reviewed_on,
-            self.interval_anchor,
-            self.inbox_name,
-            self.created_on,
+            self.last_reviewed_on.strftime("%Y-%m-%d"),
+            self.interval_anchor.strftime("%Y-%m-%d"),
+            self.created_on.strftime("%Y-%m-%d"),
             self.reviewed_count,
             self.note_state,
         )
@@ -114,10 +126,9 @@ def note_from_db_row(row) -> Note:
         interval=row[5],
         last_reviewed_on=yyyymmdd_to_date(row[6]),
         interval_anchor=yyyymmdd_to_date(row[7]),
-        inbox_name=row[8],
-        created_on=yyyymmdd_to_date(row[9]),
-        reviewed_count=row[10],
-        note_state=row[11],
+        created_on=yyyymmdd_to_date(row[8]),
+        reviewed_count=row[9],
+        note_state=row[10],
     )
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
@@ -261,13 +272,13 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                           interval = ?,
                                           last_reviewed_on = ?,
                                           interval_anchor = ?,
-                                          inbox_name = ?,
                                           reviewed_count = ?,
                                           note_state = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
-                       datetime.date.today(), datetime.date.today(),
-                       None, 0, "just created", sha1sum))
+                       datetime.date.today().strftime("%Y-%m-%d"),
+                       datetime.date.today().strftime("%Y-%m-%d"),
+                       None, 0, "normal", sha1sum))
         else:
             # The note content is new.
             note_number += 1
@@ -280,10 +291,9 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
                                last_reviewed_on=datetime.date.today(),
                                interval_anchor=interval_anchor,
-                               inbox_name=None,
                                created_on=datetime.date.today(),
                                reviewed_count=0,
-                               note_state="just created").to_tuple())
+                               note_state="normal").to_db_row())
             except sqlite3.IntegrityError:
                 print("Duplicate note text found! Please remove all duplicates and then re-import.", note_text, file=sys.stderr)
                 sys.exit()
@@ -325,7 +335,7 @@ def get_recent_unreviewed_note(notes_db: list[Note]) -> Note | None:
         # showing up in reviews. So I need to add a check for when the note was
         # last reviewed as well, I think.
         days_since_created = (datetime.date.today() - note.created_on).days
-        if (note.interval > 0 and note.note_state == "just created" and
+        if (note.interval > 0 and note.note_state == "normal" and
             days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
             candidates.append(note)
     if not candidates:
@@ -351,7 +361,7 @@ def get_exciting_note(notes_db: list[Note]) -> Note | None:
         return None
     return random.choices(candidates, weights, k=1)[0]
 
-# TODO: I only deal with "just created" and "exciting" notes specially. But
+# TODO: I only deal with "normal" and "exciting" notes specially. But
 # there's support for more reactions to notes during review. Eventually, I'd
 # like to incorporate these other reactions into the review algo as well.
 
@@ -361,7 +371,7 @@ def get_all_other_note(notes_db: list[Note]) -> Note | None:
     for note in notes_db:
         days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
-        if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
+        if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue > 0:
             candidates.append(note)
             # TODO: I need to learn more about what sensible weights for this
             # are.  For example, maybe if a note has a longer interval then
@@ -428,7 +438,7 @@ def interact_loop(conn: Connection, no_review: bool, external_program: str) -> N
             print("No notes are due")
             break
         else:
-            print(note_repr(note))
+            print(note)
             if external_program == "emacs":
                 loc = note.line_number_start
                 elisp = ("""
@@ -477,7 +487,7 @@ def interact_loop(conn: Connection, no_review: bool, external_program: str) -> N
                                       reviewed_count = ?,
                                       note_state = ?
                      where sha1sum = ?""",
-                  (new_interval, datetime.date.today(), datetime.date.today(), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
+                  (new_interval, datetime.date.today().strftime("%Y-%m-%d"), datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
         conn.commit()
         print("You will next see this note in " +
               human_friendly_time(new_interval), file=sys.stderr)
@@ -520,19 +530,6 @@ def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
-def note_repr(note: Note) -> str:
-    fragment = initial_fragment(note.note_text)
-    string = "Note(%s L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on=%s last_reviewed_on=%s %s)" % (note.inbox_name,
-            note.line_number_start,
-            note.line_number_end,
-            note.interval,
-            note.ease_factor,
-            note.note_state,
-            note.reviewed_count,
-            note.created_on,
-            note.last_reviewed_on,
-            fragment)
-    return string
 
 
 if __name__ == "__main__":
