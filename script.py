@@ -199,7 +199,12 @@ def main() -> None:
         else:
             print(-1)
     elif args.compile:
-        pass
+        notes_from_db = reload_db(conn, log_level=0)
+        for note in due_notes(notes_from_db):
+            line_number = note.line_number_start
+            column_number = 1
+            line_fragment = initial_fragment(note.note_text)
+            print(f"{INBOX_FILE}:{line_number}:{column_number}:{line_fragment}")
     else:
         interact_loop(conn)
 
