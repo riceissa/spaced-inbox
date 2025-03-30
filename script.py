@@ -44,7 +44,7 @@ INITIAL_INTERVAL: int = 50
 # way to make trivial changes without affecting the review schedule.
 
 DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
+              'ease_factor', 'interval', 'last_reviewed_on',
               'created_on', 'reviewed_count', 'note_state']
 
 def print_terminal(string: str, file=None) -> None:
@@ -61,7 +61,6 @@ class Note:
     ease_factor: int
     interval: int
     last_reviewed_on: datetime.date
-    interval_anchor: datetime.date
     created_on: datetime.date
     reviewed_count: int
     note_state: str
@@ -89,7 +88,6 @@ class Note:
             self.ease_factor,
             self.interval,
             self.last_reviewed_on.strftime("%Y-%m-%d"),
-            self.interval_anchor.strftime("%Y-%m-%d"),
             self.created_on.strftime("%Y-%m-%d"),
             self.reviewed_count,
             self.note_state,
@@ -132,10 +130,9 @@ def note_from_db_row(row) -> Note:
         ease_factor=row[4],
         interval=row[5],
         last_reviewed_on=yyyymmdd_to_date(row[6]),
-        interval_anchor=yyyymmdd_to_date(row[7]),
-        created_on=yyyymmdd_to_date(row[8]),
-        reviewed_count=row[9],
-        note_state=row[10],
+        created_on=yyyymmdd_to_date(row[7]),
+        reviewed_count=row[8],
+        note_state=row[9],
     )
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
@@ -322,18 +319,15 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                           ease_factor = ?,
                                           interval = ?,
                                           last_reviewed_on = ?,
-                                          interval_anchor = ?,
                                           reviewed_count = ?,
                                           note_state = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
                        datetime.date.today().strftime("%Y-%m-%d"),
-                       datetime.date.today().strftime("%Y-%m-%d"),
                        None, 0, "normal", sha1sum))
         else:
             # The note content is new.
             note_number += 1
-            interval_anchor = datetime.date.today()
             try:
                 c.execute("insert into notes (%s) values (%s)"
                           % (", ".join(DB_COLUMNS),
@@ -341,7 +335,6 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                           Note(sha1sum, note_text, line_number_start,
                                line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
                                last_reviewed_on=datetime.date.today(),
-                               interval_anchor=interval_anchor,
                                created_on=datetime.date.today(),
                                reviewed_count=0,
                                note_state="normal").to_db_row())
@@ -372,7 +365,7 @@ def due_notes(notes_db: list[Note]) -> list[Note]:
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = (note.interval_anchor +
+        due_date = (note.last_reviewed_on +
                     datetime.timedelta(days=note.interval))
         if datetime.date.today() >= due_date:
             result.append(note)
@@ -558,11 +551,10 @@ def interact_loop(conn: Connection) -> None:
         new_interval = good_interval(note.interval, note.ease_factor)
         c.execute("""update notes set interval = ?,
                                       last_reviewed_on = ?,
-                                      interval_anchor = ?,
                                       reviewed_count = ?,
                                       note_state = ?
                      where sha1sum = ?""",
-                  (new_interval, datetime.date.today().strftime("%Y-%m-%d"), datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
+                  (new_interval, datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
         conn.commit()
         print("You will next see this note in " +
               human_friendly_time(new_interval), file=sys.stderr)
