@@ -15,7 +15,13 @@ create table notes (
            as interval_anchor + interval). This is useful for smoothing
            out the review schedule (if we didn't know the
            last_reviewed_on date, then we might accidentally keep pushing
-           certain cards out in the future without ever reviewing them). */
+           certain cards out in the future without ever reviewing them).
+
+           2025-03-30: I am pretty sure this field is not needed anymore
+           because I improved the scheduling algorithm and stopped showing
+           users "due notes" (which are a stressful concept), smoothing is no
+           longer necessary to perform.
+         */
         interval_anchor date,
 
         created_on date,
