@@ -47,6 +47,11 @@ DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_numb
               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
               'created_on', 'reviewed_count', 'note_state']
 
+def print_terminal(string: str, file=None) -> None:
+    terminal_width = shutil.get_terminal_size().columns
+    wrapped = textwrap.fill(string, width=min(80, terminal_width))
+    print(wrapped, file=file)
+
 @dataclass
 class Note:
     sha1sum: str
@@ -112,8 +117,8 @@ if Path(config_file).exists():
             INBOX_FILE = line.strip()
 
 if not INBOX_FILE:
-    print("Inbox file not found! Please create a file named \n"
-          "inbox_file.txt containing a single line that gives \n"
+    print_terminal("Inbox file not found! Please create a file named "
+          "inbox_file.txt containing a single line that gives "
           "the full filepath of where your inbox file is located.",
           file=sys.stderr)
     sys.exit()
@@ -598,10 +603,6 @@ def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
-def print_terminal(string: str, file=None) -> None:
-    terminal_width = shutil.get_terminal_size().columns
-    wrapped = textwrap.fill(string, width=min(80, terminal_width))
-    print(wrapped, file=file)
 
 
 if __name__ == "__main__":
