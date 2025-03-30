@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import shutil
+import textwrap
 import datetime
 import re
 import os
@@ -140,19 +142,42 @@ def get_notes_from_db(conn: Connection) -> list[Note]:
 
 
 def main() -> None:
+    # 2025-03-30: Here's the commandline flags i am currently thinking of:
+    # ./script -n    => just print the line number of where to jump to
+    #     (i.e. the note to be reviewed), to stdout (or print nothing or -1
+    #     if there's no note to be reviewed). this will be like how the
+    #     current elisp implementation works. different editors can call
+    #     this script, parse the line number, then jump to that line in
+    #     however way they want.
+    # ./script --compile   => print all the due notes in a vim quickfix
+    #     or emacs M-x compile like fashion, to stdout or stderr. Basically,
+    #     the script acts like a "compiler" for your notes.
+    # ./script   => just import notes without doing anything else, but
+    #     print what happened. basically the way currently how --no-review
+    #     works
+    # we won't need an --external-program flag anymore because different
+    # editors can write their own mini-plugins to work with the -n
+    # option.
+    # i'm also thinking of removing the interactive thing entirely,
+    # rather than keeping it as like a ./script --interactive  flag.
+    # because the whole point is to just always have your inbox file
+    # open to jot down ideas. you're already in your editor. you don't
+    # want to go and open another program to do your reviews. that's too
+    # much friction.
+
     parser = argparse.ArgumentParser()
     # The following flag is useful if you just want to import new notes as a
     # cronjob or something, and don't want to get trapped in the interact loop.
-    parser.add_argument("--no-review",
-                        help=("Just import new notes, without "
-                              "printing due notes or going into "
-                              "the review interact loop"),
+    parser.add_argument("-c", "--compile",
+                        help=("compiler mode"),
                         action="store_true")
-    parser.add_argument("--external-program",
-                        help=("External program that can be used to do the "
-                              "reviews. Currently only emacs is supported."),
-                        action="store")
+    parser.add_argument("-n", "--number",
+                        help=("just print the line number to jump to"),
+                        action="store_true")
     args = parser.parse_args()
+    if args.compile and args.number:
+        print_terminal("You cannot use both --compile/-c and --number/-n simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
+        sys.exit()
     if not os.path.isfile("data.db"):
         with open("schema.sql", "r", encoding="utf-8") as f:
             conn = sqlite3.connect('data.db')
@@ -537,6 +562,10 @@ def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
+def print_terminal(string: str, file=None) -> None:
+    terminal_width = shutil.get_terminal_size().columns
+    wrapped = textwrap.fill(string, width=min(80, terminal_width))
+    print(wrapped, file=file)
 
 
 if __name__ == "__main__":
