@@ -8,11 +8,15 @@ import os.path
 import sys
 import random
 import sqlite3
+from sqlite3 import Connection, Cursor
 import hashlib
 import subprocess
 from collections import namedtuple
+from dataclasses import dataclass
+from pathlib import Path
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stderr.reconfigure(encoding='utf-8')  # type: ignore
 
 # This value sets the initial interval in days.
 INITIAL_INTERVAL = 50
@@ -36,36 +40,63 @@ INITIAL_INTERVAL = 50
 # review schedule to 50 days, which i don't want. maybe there should be some
 # way to make trivial changes without affecting the review schedule.
 
-DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-              'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
-              'inbox_name', 'created_on', 'reviewed_count', 'note_state']
-Note = namedtuple('Note', DB_COLUMNS)
+# DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
+#               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
+#               'inbox_name', 'created_on', 'reviewed_count', 'note_state']
+# Note = namedtuple('Note', DB_COLUMNS)
 
-INBOX_FILES = {}
+@dataclass
+class Note:
+    sha1sum: str
+    note_text: str
+    line_number_start: int
+    line_number_end: int
+    ease_factor: int
+    interval: int
+    last_reviewed_on: datetime.date
+    interval_anchor: datetime.date
+    inbox_name: str
+    created_on: datetime.date
+    reviewed_count: int
+    note_state: str
 
-with open("inbox_files.txt", "r", encoding="utf-8") as f:
-    for line in f:
-        if line.strip().startswith("#"):
-            continue
-        # Why do we have both the name and path? This simplifies the situation
-        # if the inbox files get moved around (e.g. if you have two different
-        # computers). As long as inbox_files.txt gives the right path for the
-        # same inbox names, it doesn't matter that the inbox files keep moving
-        # around; the database doesn't need to know where the inbox files are
-        # located, so the database does not need to be updated each time files
-        # move around.
-        name, path = line.strip().split("\t")
-        INBOX_FILES[name] = path
+INBOX_FILE = None
+
+config_file = "inbox_file.txt"
+if Path(config_file).exists():
+    with open(config_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if INBOX_FILE:
+                break
+            if line.strip().startswith("#"):
+                continue
+            # Why do we have both the name and path? This simplifies the situation
+            # if the inbox files get moved around (e.g. if you have two different
+            # computers). As long as inbox_files.txt gives the right path for the
+            # same inbox names, it doesn't matter that the inbox files keep moving
+            # around; the database doesn't need to know where the inbox files are
+            # located, so the database does not need to be updated each time files
+            # move around.
+            # 2025-03-29: note that i'm simplifying things back down to just one
+            # file, so the format no longer has a name.
+            INBOX_FILE = line.strip()
+
+if not INBOX_FILE:
+    print("Inbox file not found! Please create a file named \n"
+          "inbox_file.txt containing a single line that gives \n"
+          "the full filepath of where your inbox file is located.",
+          file=sys.stderr)
+    sys.exit()
 
 
-def get_notes_from_db(conn):
+def get_notes_from_db(conn: Connection) -> list[Note]:
     c = conn.cursor()
     return [Note(*row) for row in
             c.execute("select " + ", ".join(DB_COLUMNS) +
                       " from notes").fetchall()]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     # The following flag is useful if you just want to import new notes as a
     # cronjob or something, and don't want to get trapped in the interact loop.
@@ -90,7 +121,7 @@ def main():
     interact_loop(conn, args.no_review, args.external_program)
 
 
-def reload_db(conn):
+def reload_db(conn: Connection) -> list[Note]:
     for inbox_name in INBOX_FILES:
         inbox_path = INBOX_FILES[inbox_name]
         cur = conn.cursor()
@@ -120,11 +151,11 @@ def reload_db(conn):
     return combined_notes_db
 
 
-def clear_screen():
+def clear_screen() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def parse_inbox(lines):
+def parse_inbox(lines: list[str]) -> tuple[str, str, int, int]:
     """Parsing rules:
     - two or more blank lines in a row start a new note
     - a line with three or more equals signs and nothing else starts a new note
@@ -169,7 +200,7 @@ def parse_inbox(lines):
     return result
 
 
-def _print_lines(string):
+def _print_lines(string: str) -> None:
     """Print a string with line numbers (for debugging parse_inbox)."""
     line_number = 0
     for line in string.split("\n"):
@@ -177,7 +208,7 @@ def _print_lines(string):
         print(line_number, line)
 
 
-def update_notes_db(conn, inbox_name, notes_db, current_inbox):
+def update_notes_db(conn: Connection, inbox_name: str, notes_db: list[Note], current_inbox: str) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -247,7 +278,7 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox):
           end="")
 
 
-def due_notes(notes_db):
+def due_notes(notes_db: list[Note]) -> list[Note]:
     result = []
     for note in notes_db:
         if note.interval < 0:
@@ -259,7 +290,7 @@ def due_notes(notes_db):
             result.append(note)
     return result
 
-def get_recent_unreviewed_note(notes_db):
+def get_recent_unreviewed_note(notes_db: list[Note]) -> list[Note] | None:
     """Randomly select a note that was created in the last 50-100 days and has
     not yet been reviewed yet."""
     candidates = []
@@ -276,7 +307,7 @@ def get_recent_unreviewed_note(notes_db):
         return None
     return random.choice(candidates)
 
-def get_exciting_note(notes_db):
+def get_exciting_note(notes_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_db:
@@ -299,7 +330,7 @@ def get_exciting_note(notes_db):
 # there's support for more reactions to notes during review. Eventually, I'd
 # like to incorporate these other reactions into the review algo as well.
 
-def get_all_other_note(notes_db):
+def get_all_other_note(notes_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_db:
@@ -318,7 +349,7 @@ def get_all_other_note(notes_db):
     return random.choices(candidates, weights, k=1)[0]
 
 
-def interact_loop(conn, no_review, external_program):
+def interact_loop(conn: Connection, no_review: bool, external_program: str) -> None:
     while True:
         clear_screen()
         notes_db = reload_db(conn)
@@ -426,24 +457,24 @@ def interact_loop(conn, no_review, external_program):
               human_friendly_time(new_interval), file=sys.stderr)
 
 
-def sha1sum(string):
+def sha1sum(string: str) -> str:
     return hashlib.sha1(string.encode('utf-8')).hexdigest()
 
 
-def initial_fragment(string, words=20):
+def initial_fragment(string: str, words: int = 20) -> str:
     """Get the first `words` words from `string`, joining any linebreaks."""
     return " ".join(string.split()[:words])
 
 
-def good_interval(interval, ease_factor):
+def good_interval(interval: int, ease_factor: int) -> int:
     return int(interval * ease_factor/100)
 
 
-def again_interval(interval):
+def again_interval(interval: int) -> int:
     return int(interval * 0.90)
 
 
-def human_friendly_time(days):
+def human_friendly_time(days: float) -> float:
     if days < 0:
         return "-" + human_friendly_time(abs(days))
     elif days * 24 * 60 < 1:
@@ -459,11 +490,11 @@ def human_friendly_time(days):
     else:
         return str(round(days / 365.25, 2)) + " years"
 
-def yyyymmdd_to_date(string):
+def yyyymmdd_to_date(string: str) -> datetime.datetime:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
-def note_repr(note):
+def note_repr(note: Note) -> str:
     fragment = initial_fragment(note.note_text)
     string = "Note(%s L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on=%s last_reviewed_on=%s %s)" % (note.inbox_name,
             note.line_number_start,
