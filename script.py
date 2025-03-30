@@ -104,11 +104,28 @@ if not INBOX_FILE:
           file=sys.stderr)
     sys.exit()
 
+def note_from_db_row(row) -> Note:
+    return Note(
+        sha1sum=row[0],
+        note_text=row[1],
+        line_number_start=row[2],
+        line_number_end=row[3],
+        ease_factor=row[4],
+        interval=row[5],
+        last_reviewed_on=yyyymmdd_to_date(row[6]),
+        interval_anchor=yyyymmdd_to_date(row[7]),
+        inbox_name=row[8],
+        created_on=yyyymmdd_to_date(row[9]),
+        reviewed_count=row[10],
+        note_state=row[11],
+    )
+
 def get_notes_from_db(conn: Connection) -> list[Note]:
     c = conn.cursor()
-    return [Note(*row) for row in
+    result = [note_from_db_row(row) for row in
             c.execute("select " + ", ".join(DB_COLUMNS) +
                       " from notes").fetchall()]
+    return result
 
 
 def main() -> None:
@@ -142,7 +159,7 @@ def reload_db(conn: Connection) -> list[Note]:
         select {cols} from notes
         """.format(cols=", ".join(DB_COLUMNS),)
     ).fetchall()
-    notes_db = [Note(*row) for row in fetched]
+    notes_db = [note_from_db_row(row) for row in fetched]
     print("Importing new notes from {}... ".format(INBOX_FILE),
           file=sys.stderr, end="")
     with open(INBOX_FILE, "r", encoding="utf-8") as f:
