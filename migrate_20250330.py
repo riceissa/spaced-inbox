@@ -39,4 +39,4 @@ for row in fetched:
         insert into notes (sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, note_text) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (old_sha1sum, old_line_number_start, old_line_number_end, old_ease_factor, old_interval, old_last_reviewed_on, old_created_on, old_reviewed_count, new_note_state, old_note_text))
 
-    conn_new.commit()
+conn_new.commit()
