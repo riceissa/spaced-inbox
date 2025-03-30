@@ -186,7 +186,7 @@ def main() -> None:
     else:
         conn = sqlite3.connect('data.db')
 
-    interact_loop(conn, args.no_review, args.external_program)
+    interact_loop(conn)
 
 
 def reload_db(conn: Connection) -> list[Note]:
@@ -415,56 +415,68 @@ def get_all_other_note(notes_db: list[Note]) -> Note | None:
         return None
     return random.choices(candidates, weights, k=1)[0]
 
+def pick_note_to_review(notes: list[Note]) -> Note | None:
+    note: Note | None = None
+    rand = random.random()
+    print("random number =", rand, file=sys.stderr)
+    if rand < 0.5:
+        print("Attempting to choose a recent unreviewed note...",
+              end="", file=sys.stderr)
+        note = get_recent_unreviewed_note(notes)
+        if note is None:
+            print("failed.", file=sys.stderr)
+        else:
+            print("success.", file=sys.stderr)
+    if note is None and rand < 0.7:
+        print("Attempting to choose an exciting note...", end="",
+              file=sys.stderr)
+        note = get_exciting_note(notes)
+        if note is None:
+            print("failed.", file=sys.stderr)
+        else:
+            print("success.", file=sys.stderr)
+    if note is None:
+        print("Attempting to choose some other note...", end="",
+              file=sys.stderr)
+        note = get_all_other_note(notes)
+        if note is None:
+            print("failed.", file=sys.stderr)
+        else:
+            print("success.", file=sys.stderr)
+    return note
 
-def interact_loop(conn: Connection, no_review: bool, external_program: str) -> None:
+def calc_stats(notes: list[Note]) -> tuple[int, int]:
+    num_notes = 0
+    num_due_notes = 0
+    note: Note | None
+    for note in notes:
+        if note.interval > 0:
+            num_notes += 1
+            days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+            days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
+            if days_overdue > 0:
+                num_due_notes += 1
+    return (num_notes, num_due_notes)
+
+def record_review_load(num_notes: int, num_due_notes: int) -> None:
+    if not os.path.isfile("review-load.csv"):
+        with open("review-load.csv", "w", encoding="utf-8") as review_load_file:
+            review_load_file.write("timestamp,num_notes,num_due_notes\n")
+    with open("review-load.csv", "a", encoding="utf-8") as review_load_file:
+        review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
+
+def interact_loop(conn: Connection) -> None:
+    no_review = False
+    external_program = ""
     while True:
-        clear_screen()
+        # clear_screen()
         notes_db = reload_db(conn)
-        if no_review:
-            break
-        num_notes = 0
-        num_due_notes = 0
-        note: Note | None
-        for note in notes_db:
-            if note.interval > 0:
-                num_notes += 1
-                days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
-                days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
-                if days_overdue > 0:
-                    num_due_notes += 1
+        num_notes, num_due_notes = calc_stats(notes_db)
         print("Number of notes:", num_notes)
         print("Number of notes that are due:", num_due_notes)
-        if not os.path.isfile("review-load.csv"):
-            with open("review-load.csv", "w", encoding="utf-8") as review_load_file:
-                review_load_file.write("timestamp,num_notes,num_due_notes\n")
-        with open("review-load.csv", "a", encoding="utf-8") as review_load_file:
-            review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
+        record_review_load(num_notes, num_due_notes)
 
-        # Pick a note to review
-        note = None
-        rand = random.random()
-        print("random number =", rand, file=sys.stderr)
-        if rand < 0.5:
-            print("Attempting to choose a recent unreviewed note...", end="", file=sys.stderr)
-            note = get_recent_unreviewed_note(notes_db)
-            if note is None:
-                print("failed.", file=sys.stderr)
-            else:
-                print("success.", file=sys.stderr)
-        if note is None and rand < 0.7:
-            print("Attempting to choose an exciting note...", end="", file=sys.stderr)
-            note = get_exciting_note(notes_db)
-            if note is None:
-                print("failed.", file=sys.stderr)
-            else:
-                print("success.", file=sys.stderr)
-        if note is None:
-            print("Attempting to choose some other note...", end="", file=sys.stderr)
-            note = get_all_other_note(notes_db)
-            if note is None:
-                print("failed.", file=sys.stderr)
-            else:
-                print("success.", file=sys.stderr)
+        note: Note | None = pick_note_to_review(notes_db)
 
         if note is None:
             print("No notes are due")
