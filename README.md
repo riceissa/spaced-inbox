@@ -8,6 +8,12 @@ thoughts?  Spaced inbox helps you with that problem by periodically showing you
 old notes you've written, gently reminding you to build on your previous
 thoughts.
 
+When I use the spaced inbox, it feels like I am having conversations with all
+the versions of myself: past, present, and future. I read stuff written by my
+past self and respond to it, so that my future self can see it. I can leave
+messages for my future self. But also what I write now is for my present self,
+clarifying my own thoughts.
+
 Spaced inbox implements a minimal [writing inbox](https://notes.andymatuschak.org/z5aJUJcSbxuQxzHr2YvaY4cX5TuvLQT7r27Dz) with support for spaced repetition. How does it work?
 
 1. You write your notes in a plain text file. Two blank lines, or a line
