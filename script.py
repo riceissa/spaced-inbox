@@ -9,6 +9,7 @@ import sys
 import random
 import sqlite3
 from sqlite3 import Connection, Cursor
+from io import TextIOWrapper
 import hashlib
 import subprocess
 from collections import namedtuple
@@ -54,12 +55,28 @@ class Note:
     interval: int
     last_reviewed_on: datetime.date
     interval_anchor: datetime.date
-    inbox_name: str
+    inbox_name: None  # deprecated field; going to remove at some point
     created_on: datetime.date
     reviewed_count: int
     note_state: str
 
-INBOX_FILE: str | None = None
+    def to_tuple(self):
+        return (
+            self.sha1sum,
+            self.note_text,
+            self.line_number_start,
+            self.line_number_end,
+            self.ease_factor,
+            self.interval,
+            self.last_reviewed_on,
+            self.interval_anchor,
+            self.inbox_name,
+            self.created_on,
+            self.reviewed_count,
+            self.note_state,
+        )
+
+INBOX_FILE: str = ""
 
 config_file = "inbox_file.txt"
 if Path(config_file).exists():
@@ -86,8 +103,6 @@ if not INBOX_FILE:
           "the full filepath of where your inbox file is located.",
           file=sys.stderr)
     sys.exit()
-
-assert isinstance(INBOX_FILE, str)
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
     c = conn.cursor()
@@ -122,18 +137,17 @@ def main() -> None:
 
 
 def reload_db(conn: Connection) -> list[Note]:
-    inbox_path = INBOX_FILE
     cur = conn.cursor()
     fetched = cur.execute("""
         select {cols} from notes
         """.format(cols=", ".join(DB_COLUMNS),)
     ).fetchall()
     notes_db = [Note(*row) for row in fetched]
-    print("Importing new notes from {}... ".format(inbox_path),
+    print("Importing new notes from {}... ".format(INBOX_FILE),
           file=sys.stderr, end="")
-    with open(inbox_path, "r", encoding="utf-8") as f:
+    with open(INBOX_FILE, "r", encoding="utf-8") as f:
         current_inbox = parse_inbox(f)
-    update_notes_db(conn, inbox_name, notes_db, current_inbox)
+    update_notes_db(conn, notes_db, current_inbox)
     print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
@@ -149,7 +163,7 @@ def clear_screen() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def parse_inbox(lines: list[str]) -> tuple[str, str, int, int]:
+def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
     """Parsing rules:
     - two or more blank lines in a row start a new note
     - a line with three or more equals signs and nothing else starts a new note
@@ -202,7 +216,7 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, inbox_name: str, notes_db: list[Note], current_inbox: str) -> None:
+def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[str, str, int, int]]) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -236,7 +250,7 @@ def update_notes_db(conn: Connection, inbox_name: str, notes_db: list[Note], cur
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
                        datetime.date.today(), datetime.date.today(),
-                       inbox_name, 0, "just created", sha1sum))
+                       None, 0, "just created", sha1sum))
         else:
             # The note content is new.
             note_number += 1
@@ -249,12 +263,12 @@ def update_notes_db(conn: Connection, inbox_name: str, notes_db: list[Note], cur
                                line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
                                last_reviewed_on=datetime.date.today(),
                                interval_anchor=interval_anchor,
-                               inbox_name=inbox_name,
+                               inbox_name=None,
                                created_on=datetime.date.today(),
                                reviewed_count=0,
-                               note_state="just created"))
+                               note_state="just created").to_tuple())
             except sqlite3.IntegrityError:
-                print("Duplicate note text found! Please remove all duplicates and then re-import.", inbox_name, note_text, file=sys.stderr)
+                print("Duplicate note text found! Please remove all duplicates and then re-import.", note_text, file=sys.stderr)
                 sys.exit()
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
@@ -278,13 +292,13 @@ def due_notes(notes_db: list[Note]) -> list[Note]:
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = (yyyymmdd_to_date(note.interval_anchor) +
+        due_date = (note.interval_anchor +
                     datetime.timedelta(days=note.interval))
         if datetime.date.today() >= due_date:
             result.append(note)
     return result
 
-def get_recent_unreviewed_note(notes_db: list[Note]) -> list[Note] | None:
+def get_recent_unreviewed_note(notes_db: list[Note]) -> Note | None:
     """Randomly select a note that was created in the last 50-100 days and has
     not yet been reviewed yet."""
     candidates = []
@@ -293,7 +307,7 @@ def get_recent_unreviewed_note(notes_db: list[Note]) -> list[Note] | None:
         # problem, where even if a note has been reviewed, it will still keep
         # showing up in reviews. So I need to add a check for when the note was
         # last reviewed as well, I think.
-        days_since_created = (datetime.date.today() - yyyymmdd_to_date(note.created_on)).days
+        days_since_created = (datetime.date.today() - note.created_on).days
         if (note.interval > 0 and note.note_state == "just created" and
             days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
             candidates.append(note)
@@ -305,7 +319,7 @@ def get_exciting_note(notes_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_db:
-        days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
+        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
             candidates.append(note)
@@ -328,7 +342,7 @@ def get_all_other_note(notes_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_db:
-        days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
+        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
@@ -351,10 +365,11 @@ def interact_loop(conn: Connection, no_review: bool, external_program: str) -> N
             break
         num_notes = 0
         num_due_notes = 0
+        note: Note | None
         for note in notes_db:
             if note.interval > 0:
                 num_notes += 1
-                days_since_reviewed = (datetime.date.today() - yyyymmdd_to_date(note.last_reviewed_on)).days
+                days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
                 days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
                 if days_overdue > 0:
                     num_due_notes += 1
@@ -408,7 +423,7 @@ def interact_loop(conn: Connection, no_review: bool, external_program: str) -> N
                 """ % (
                     # since the db only stores the inbox name, we must look up
                     # the filepath from INBOX_FILES
-                    INBOX_FILES[note.inbox_name].replace("\\", r"\\\\"),
+                    INBOX_FILE.replace("\\", r"\\\\"),
                     loc
                 )).replace("\n", " ").strip()
                 emacsclient = "emacsclient"
@@ -468,7 +483,7 @@ def again_interval(interval: int) -> int:
     return int(interval * 0.90)
 
 
-def human_friendly_time(days: float) -> float:
+def human_friendly_time(days: float) -> str:
     if days < 0:
         return "-" + human_friendly_time(abs(days))
     elif days * 24 * 60 < 1:
@@ -484,7 +499,7 @@ def human_friendly_time(days: float) -> float:
     else:
         return str(round(days / 365.25, 2)) + " years"
 
-def yyyymmdd_to_date(string: str) -> datetime.datetime:
+def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
 
 
