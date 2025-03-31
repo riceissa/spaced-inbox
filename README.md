@@ -134,7 +134,7 @@ Add the following to your `~/.emacs.d/init.el` file:
       (message "Was not able to navigate to %s line %d" filename line-number)
       nil)))
 
-(defun run-spaced-inbox ()
+(defun spaced-inbox ()
   (interactive)
   (let ((spaced-inbox-command "spaced_inbox.py -r"))
     (message "Running spaced inbox script via: %s ..." spaced-inbox-command)
@@ -154,7 +154,7 @@ visible from within Emacs. Emacs sometimes has trouble with using the shell's
 `M-x compile`, deleting the default `make -k `, and then entering whatever
 spaced inbox command you want to try out.
 
-Restart Emacs. Now you should be able to just do `M-x run-spaced-inbox` to do a
+Restart Emacs. Now you should be able to just do `M-x spaced-inbox` to do a
 single review. Of course, you can map this command to any key combination you
 want.
 
