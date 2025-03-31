@@ -119,6 +119,32 @@ select interval_anchor, interval, date(interval_anchor, '+' || interval || ' day
 
 See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/blob/master/review_load.py).
 
+## Using the script from within Vim
+
+First, make sure that the spaced inbox directory is in your path. Add something
+like the following to your `~/.bashrc`:
+
+```bash
+# The following location depends on where you cloned the git repo to
+export PATH="$HOME/projects/spaced-inbox:$PATH"
+```
+
+Then put the following in your vimrc:
+
+```vim
+command! Roll call s:ExecuteRoll()
+function! s:ExecuteRoll()
+  let l:mp = &makeprg
+  set makeprg=spaced_inbox.py\ -r
+  silent! make
+  let &makeprg = l:mp
+  silent! cfirst
+endfunction
+```
+
+Now you can just call `:Roll` to do a review. This works from any file. You can
+remap `:Roll` to any keybinding to make it easier to do reviews.
+
 ## TODO
 
 - there's a good chance I'll hate how interaction works (right now you have to manually go to the relevant line)
