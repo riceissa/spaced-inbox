@@ -143,10 +143,11 @@ def note_from_db_row(row) -> Note:
     )
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
-    c = conn.cursor()
-    result = [note_from_db_row(row) for row in
-            c.execute("select " + ", ".join(DB_COLUMNS) +
-                      " from notes").fetchall()]
+    cursor = conn.cursor()
+    columns = ", ".join(DB_COLUMNS)
+    query = f"select {columns} from notes"
+    rows = cursor.execute(query).fetchall()
+    result = [note_from_db_row(row) for row in rows]
     return result
 
 
@@ -226,12 +227,7 @@ def tag_with_filename(filepath: Path) -> Callable[[ParseChunk], tuple[Path, Pars
 
 
 def reload_db(conn: Connection, log_level=1) -> list[Note]:
-    cur = conn.cursor()
-    fetched = cur.execute("""
-        select {cols} from notes
-        """.format(cols=", ".join(DB_COLUMNS),)
-    ).fetchall()
-    notes_db = [note_from_db_row(row) for row in fetched]
+    notes_from_db = get_notes_from_db(conn)
     current_inbox: list[tuple[Path, ParseChunk]] = []
     for path in INBOX_PATHS:
         if log_level > 0:
@@ -242,7 +238,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                      parse_inbox(f)))
         if log_level > 0:
             print("done.", file=sys.stderr)
-    update_notes_db(conn, notes_db, current_inbox, log_level)
+    update_notes_db(conn, notes_from_db, current_inbox, log_level)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
@@ -327,7 +323,7 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
+def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -335,7 +331,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
     c = conn.cursor()
-    db_hashes = {note.sha1sum: note for note in notes_db}
+    db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
     inbox_size = len(current_inbox)
     for inbox_filepath, pc in current_inbox:
@@ -395,7 +391,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
     # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(pc.sha1sum for _, pc in current_inbox)
     delete_count = 0
-    for note in notes_db:
+    for note in notes_from_db:
         if note.sha1sum not in inbox_hashes and note.interval >= 0:
             delete_count += 1
             c.execute("update notes set interval = -1 where sha1sum = ?",
@@ -407,9 +403,9 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
         print("done.", file=sys.stderr)
 
 
-def due_notes(notes_db: list[Note]) -> list[Note]:
+def due_notes(notes_from_db: list[Note]) -> list[Note]:
     result = []
-    for note in notes_db:
+    for note in notes_from_db:
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
@@ -419,11 +415,11 @@ def due_notes(notes_db: list[Note]) -> list[Note]:
             result.append(note)
     return result
 
-def get_recent_unreviewed_note(notes_db: list[Note]) -> Note | None:
+def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
     """Randomly select a note that was created in the last 50-100 days and has
     not yet been reviewed yet."""
     candidates = []
-    for note in notes_db:
+    for note in notes_from_db:
         # FIXME: I suspect using days_since_created here actually causes a
         # problem, where even if a note has been reviewed, it will still keep
         # showing up in reviews. So I need to add a check for when the note was
@@ -443,10 +439,10 @@ def get_recent_unreviewed_note(notes_db: list[Note]) -> Note | None:
         return None
     return random.choice(candidates)
 
-def get_exciting_note(notes_db: list[Note]) -> Note | None:
+def get_exciting_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
-    for note in notes_db:
+    for note in notes_from_db:
         days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
@@ -466,10 +462,10 @@ def get_exciting_note(notes_db: list[Note]) -> Note | None:
 # there's support for more reactions to notes during review. Eventually, I'd
 # like to incorporate these other reactions into the review algo as well.
 
-def get_all_other_note(notes_db: list[Note]) -> Note | None:
+def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
-    for note in notes_db:
+    for note in notes_from_db:
         days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue > 0:
