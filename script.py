@@ -15,7 +15,7 @@ from io import TextIOWrapper
 import hashlib
 import subprocess
 from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
@@ -105,6 +105,18 @@ class ParseChunk:
     note_text: str
     line_number_start: int
     line_number_end: int
+    note_state: str = field(init=False)
+
+    def __post_init__(self):
+        self.note_state = "normal"
+        new_note_text = ""
+        for line in self.note_text.splitlines(keepends=True):
+            match = re.match(r'\d\d\d\d-\d\d-\d\d: #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+            if match:
+                self.note_state = match.group(1)
+            else:
+                new_note_text += line
+        self.note_text = new_note_text
 
 
 if CONFIG_FILE_PATH.exists():
@@ -339,6 +351,8 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
             # The note content is not new, but the position in the file (as
             # well as the file in which the note appears) may have changed, so
             # update the line numbers and filepath.
+            # TODO(2025-03-30): do we need to update more fields? same question
+            # for the other update commands below.
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           filepath = ?
