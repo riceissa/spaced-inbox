@@ -5,13 +5,18 @@
 
 import sys
 import sqlite3
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
-conn_old = sqlite3.connect('data-2025-03-30.db.bak')
+DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
+backup_path = DB_PATH.parent / 'data-migrate_20250330.db.bak'
+DB_PATH.rename(backup_path)
+
+conn_old = sqlite3.connect(str(backup_path))
 c_old = conn_old.cursor()
 
-conn_new = sqlite3.connect('data_new.db')
+conn_new = sqlite3.connect(str(DB_PATH))
 c_new = conn_new.cursor()
 with open("schema.sql", "r", encoding="utf-8") as f:
     c_new.executescript(f.read())
