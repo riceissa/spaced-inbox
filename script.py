@@ -21,6 +21,19 @@ from pathlib import Path
 sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 sys.stderr.reconfigure(encoding='utf-8')  # type: ignore
 
+def print_terminal(string: str, file=None) -> None:
+    terminal_width = shutil.get_terminal_size().columns
+    wrapped = textwrap.fill(string, width=min(80, terminal_width), break_long_words=False, break_on_hyphens=False)
+    print(wrapped, file=file)
+
+CONFIG_FILE_PATH: Path = Path("~/.config/spaced-inbox/config.txt").expanduser()
+DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
+INBOX_FILE: str = ""
+
+if not CONFIG_FILE_PATH.exists():
+    print_terminal(f"Config file not found! Please create a file at {CONFIG_FILE_PATH} containing the location of your inbox.txt file.")
+    sys.exit()
+
 # This value sets the initial interval in days.
 INITIAL_INTERVAL: int = 50
 
@@ -47,10 +60,6 @@ DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_numb
               'ease_factor', 'interval', 'last_reviewed_on',
               'created_on', 'reviewed_count', 'note_state']
 
-def print_terminal(string: str, file=None) -> None:
-    terminal_width = shutil.get_terminal_size().columns
-    wrapped = textwrap.fill(string, width=min(80, terminal_width))
-    print(wrapped, file=file)
 
 @dataclass
 class Note:
@@ -93,11 +102,9 @@ class Note:
             self.note_state,
         )
 
-INBOX_FILE: str = ""
 
-config_file = "inbox_file.txt"
-if Path(config_file).exists():
-    with open(config_file, "r", encoding="utf-8") as f:
+if CONFIG_FILE_PATH.exists():
+    with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
         for line in f:
             if INBOX_FILE:
                 break
@@ -238,6 +245,22 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
 def clear_screen() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def is_yyyymmdd_date(s: str) -> bool:
+    """If the string is a YYYY-MM-DD date string like "2025-03-30" then return
+    True, otherwise return False."""
+    match = re.match(r'(\d\d\d\d)-(\d\d)-(\d\d)$', s)
+    if not match:
+        return False
+    year, month, day = map(int, match.groups())
+    # This is not a perfect algorithm, but it will be good enough for our
+    # purposes. Might fix it at some point.
+    if year < 1960:
+        return False
+    if not (1 <= month <= 12):
+        return False
+    if not (1 <= day <= 31):
+        return False
+    return True
 
 def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
     """Parsing rules:
@@ -281,6 +304,8 @@ def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
     # We ended the loop above without adding the final note, so add it now
     result.append((sha1sum(note_text.strip()), note_text,
                    line_number_start, line_number))
+    # Filter out all the date separator entries
+    result = [x for x in result if not is_yyyymmdd_date(x[1])]
     return result
 
 
