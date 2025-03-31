@@ -328,6 +328,8 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
     """
+    if log_level > 0:
+        print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
     c = conn.cursor()
     db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
@@ -342,7 +344,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                           filepath = ?
                          where sha1sum = ?""",
                       (pc.line_number_start, pc.line_number_end,
-                       inbox_filepath, pc.sha1sum))
+                       str(inbox_filepath), pc.sha1sum))
         elif pc.sha1sum in db_hashes:
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
@@ -357,7 +359,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                           note_state = ?
                          where sha1sum = ?""",
                       (pc.line_number_start, pc.line_number_end,
-                       inbox_filepath, 300, INITIAL_INTERVAL,
+                       str(inbox_filepath), 300, INITIAL_INTERVAL,
                        datetime.date.today().strftime("%Y-%m-%d"),
                        0, "normal", pc.sha1sum))
         else:
@@ -376,7 +378,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                created_on=datetime.date.today(),
                                reviewed_count=0,
                                note_state="normal",
-                               filepath=inbox_filepath,
+                               filepath=str(inbox_filepath),
                                note_text=pc.note_text,
                             ).to_db_row())
             except sqlite3.IntegrityError:
@@ -396,8 +398,9 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                       (note.sha1sum,))
     conn.commit()
     if log_level > 0:
-        print("{delete_count} notes were soft-deleted... ", file=sys.stderr,
+        print(f"{delete_count} notes were soft-deleted... ", file=sys.stderr,
               end="")
+        print("done.", file=sys.stderr)
 
 
 def due_notes(notes_db: list[Note]) -> list[Note]:
