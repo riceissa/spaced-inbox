@@ -152,7 +152,12 @@ visible from within Emacs. Emacs sometimes has trouble with using the shell's
 `spaced_inbox.py` script. You may even need to prefix the command with
 `python3` or `py.exe`.  To debug the executable location, I recommend doing
 `M-x compile`, deleting the default `make -k `, and then entering whatever
-spaced inbox command you want to try out.
+spaced inbox command you want to try out.  In fact, if you want, you can just
+do `M-x compile` and then `spaced_inbox.py -r` or `spaced_inbox.py -c` to
+interact with the script, in just the way that you would interact with any
+other compiler from within Emacs. Think of the spaced inbox script as a
+compiler for your notes; instead of giving your a list of errors in your code,
+it shows you a list of notes that perhaps you should look back on.
 
 Restart Emacs. Now you should be able to just do `M-x spaced-inbox` to do a
 single review. Of course, you can map this command to any key combination you
@@ -182,6 +187,7 @@ function! s:ExecuteRoll()
   silent! make
   let &makeprg = l:mp
   silent! cfirst
+  normal! zt
 endfunction
 ```
 
