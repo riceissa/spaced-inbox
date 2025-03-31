@@ -168,6 +168,10 @@ like the following to your `~/.bashrc`:
 export PATH="$HOME/projects/spaced-inbox:$PATH"
 ```
 
+Alternatively, if you don't want to mess with your `PATH`, you can just modify
+the `set makeprg=...` line below to include the full path to the
+`spaced_inbox.py` script.
+
 Then put the following in your vimrc:
 
 ```vim
