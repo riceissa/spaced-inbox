@@ -2,3 +2,4 @@ data.db
 data-*.db.bak
 inbox_files.txt
 review-load.csv
+inbox.txt
