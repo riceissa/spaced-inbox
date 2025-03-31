@@ -203,7 +203,9 @@ def main() -> None:
         print_terminal("You cannot use both --compile/-c and --roll/-r simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
         sys.exit()
     if not (DB_PATH.exists() and DB_PATH.is_file()):
-        with open("schema.sql", "r", encoding="utf-8") as f:
+        script_dir = Path(__file__).parent.absolute()
+        schema_location = script_dir / "schema.sql"
+        with open(schema_location, "r", encoding="utf-8") as f:
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.executescript(f.read())
