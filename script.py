@@ -175,12 +175,12 @@ def main() -> None:
     parser.add_argument("-c", "--compile",
                         help=("compiler mode"),
                         action="store_true")
-    parser.add_argument("-n", "--number",
+    parser.add_argument("-r", "--roll",
                         help=("just print the line number to jump to"),
                         action="store_true")
     args = parser.parse_args()
-    if args.compile and args.number:
-        print_terminal("You cannot use both --compile/-c and --number/-n simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
+    if args.compile and args.roll:
+        print_terminal("You cannot use both --compile/-c and --roll/-r simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
         sys.exit()
     if not (DB_PATH.exists() and DB_PATH.is_file()):
         with open("schema.sql", "r", encoding="utf-8") as f:
@@ -190,15 +190,18 @@ def main() -> None:
     else:
         conn = sqlite3.connect(DB_PATH)
 
-    if args.number:
+    if args.roll:
         notes_from_db = reload_db(conn, log_level=0)
         note: Note | None = pick_note_to_review(notes_from_db, log_level=0)
         if note:
-            print(note.line_number_start)
-        else:
-            print(-1)
+            inbox_file = note.filepath
+            line_number = note.line_number_start
+            column_number = 1
+            line_fragment = initial_fragment(note.note_text)
+            print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
     elif args.compile:
         notes_from_db = reload_db(conn, log_level=0)
+        # TODO: probably sort before printing.
         for note in due_notes(notes_from_db):
             inbox_file = note.filepath
             line_number = note.line_number_start
@@ -228,8 +231,8 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
     current_inbox: list[tuple[Path, ParseChunk]] = []
     for path in INBOX_PATHS:
         if log_level > 0:
-            print("Importing new notes from {}... ".format(path),
-                  file=sys.stderr, end="")
+            print(f"Importing new notes from {path}... ", file=sys.stderr,
+                  end="")
         with open(path, "r", encoding="utf-8") as f:
             current_inbox.extend(map(tag_with_filename(path),
                                      parse_inbox(f)))
@@ -331,27 +334,32 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
     inbox_size = len(current_inbox)
     for inbox_filepath, pc in current_inbox:
         if pc.sha1sum in db_hashes and db_hashes[pc.sha1sum].interval >= 0:
-            # The note content is not new, but the position in the file may
-            # have changed, so update the line numbers
+            # The note content is not new, but the position in the file (as
+            # well as the file in which the note appears) may have changed, so
+            # update the line numbers and filepath.
             c.execute("""update notes set line_number_start = ?,
-                                          line_number_end = ?
+                                          line_number_end = ?,
+                                          filepath = ?
                          where sha1sum = ?""",
-                      (pc.line_number_start, pc.line_number_end, pc.sha1sum))
+                      (pc.line_number_start, pc.line_number_end,
+                       inbox_filepath, pc.sha1sum))
         elif pc.sha1sum in db_hashes:
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
             # reset the review schedule.
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
+                                          filepath = ?,
                                           ease_factor = ?,
                                           interval = ?,
                                           last_reviewed_on = ?,
                                           reviewed_count = ?,
                                           note_state = ?
                          where sha1sum = ?""",
-                      (pc.line_number_start, pc.line_number_end, 300, INITIAL_INTERVAL,
+                      (pc.line_number_start, pc.line_number_end,
+                       inbox_filepath, 300, INITIAL_INTERVAL,
                        datetime.date.today().strftime("%Y-%m-%d"),
-                       None, 0, "normal", pc.sha1sum))
+                       0, "normal", pc.sha1sum))
         else:
             # The note content is new.
             note_number += 1
@@ -376,7 +384,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                 sys.exit()
     conn.commit()
     if log_level > 0:
-        print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
+        print(f"{note_number} new notes found... ", file=sys.stderr, end="")
 
     # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(pc.sha1sum for _, pc in current_inbox)
@@ -388,7 +396,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                       (note.sha1sum,))
     conn.commit()
     if log_level > 0:
-        print("%s notes were soft-deleted... " % (delete_count,), file=sys.stderr,
+        print("{delete_count} notes were soft-deleted... ", file=sys.stderr,
               end="")
 
 
