@@ -105,10 +105,6 @@ I'm using gitbash as my terminal, with the graphical Emacs to edit files. I'm su
 
 If you wish to run convenience scripts like `do.sh`, you will need to download sqlite3.exe from [this page](https://www.sqlite.org/download.html) (it's in sqlite-tools-win32-x86-3350400.zip) and put the executable in your PATH so that gitbash can find it (e.g. place it in `C:/Users/YOURNAME/bin`).
 
-## If using Emacs
-
-Once starting Emacs, make sure to run `server-start`; this allows emacsclient to send elisp code to the existing Emacs instance.
-
 ## some helpful sql commands to poke around in the db
 
 To find the notes that will be due first:
@@ -118,6 +114,46 @@ select interval_anchor, interval, date(interval_anchor, '+' || interval || ' day
 ```
 
 See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/blob/master/review_load.py).
+
+## Using the script from within Emacs
+
+Add the following to your `~/.emacs.d/init.el` file:
+
+```elisp
+(defun spaced-inbox--navigate-from-string (input-string)
+  (if (string-match "^\\(.*\\):\\([0-9]+\\):[0-9]+\\(?::.*\\)?$" input-string)
+      (let ((filename (string-trim (match-string 1 input-string)))
+            (line-number (string-to-number (match-string 2 input-string))))
+        (message "Navigating to %s:%d..." filename line-number)
+        (with-current-buffer (window-buffer (selected-window))
+          (find-file filename)
+          (goto-line line-number)
+          (recenter-top-bottom 0))
+        t)
+    (progn
+      (message "Was not able to navigate to %s line %d" filename line-number)
+      nil)))
+
+(defun run-spaced-inbox ()
+  (interactive)
+  (let ((spaced-inbox-command "spaced_inbox.py -r"))
+    (message "Running spaced inbox script via: %s ..." spaced-inbox-command)
+    (let* ((raw-output (shell-command-to-string spaced-inbox-command))
+           (output (string-trim raw-output)))
+      (if (string-empty-p output)
+          (message "Spaced inbox script produced no output.")
+        (progn
+          (spaced-inbox--navigate-from-string output))))))
+```
+
+Make sure to replace the `"spaced_inbox.py -r"` part with whatever command is
+visible from within Emacs. Emacs sometimes has trouble with using the shell's
+`PATH` variable, so you may need to provide an absolute path to the
+`spaced_inbox.py` script. You may even need to prefix the command with
+`python3` or `py.exe`.
+
+Restart Emacs. Now you should be able to just do `M-x run-spaced-inbox` to do a
+single review.
 
 ## Using the script from within Vim
 
