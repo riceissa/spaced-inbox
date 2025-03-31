@@ -150,10 +150,13 @@ Make sure to replace the `"spaced_inbox.py -r"` part with whatever command is
 visible from within Emacs. Emacs sometimes has trouble with using the shell's
 `PATH` variable, so you may need to provide an absolute path to the
 `spaced_inbox.py` script. You may even need to prefix the command with
-`python3` or `py.exe`.
+`python3` or `py.exe`.  To debug the executable location, I recommend doing
+`M-x compile`, deleting the default `make -k `, and then entering whatever
+spaced inbox command you want to try out.
 
 Restart Emacs. Now you should be able to just do `M-x run-spaced-inbox` to do a
-single review.
+single review. Of course, you can map this command to any key combination you
+want.
 
 ## Using the script from within Vim
 
