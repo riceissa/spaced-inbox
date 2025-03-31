@@ -45,5 +45,10 @@ create table notes (
          */
         note_state text,
 
+        /* The file in which this note was found. If the filename changes or
+         * the note is moved to a different file, the script will automatically
+         * update this column to the new location. */
+        filepath text,
+
         note_text text
 );

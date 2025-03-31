@@ -17,6 +17,7 @@ import subprocess
 from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 sys.stderr.reconfigure(encoding='utf-8')  # type: ignore
@@ -29,10 +30,10 @@ def print_terminal(string: str, file=None) -> None:
 CONFIG_FILE_PATH: Path = Path("~/.config/spaced-inbox/config.txt").expanduser()
 DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-INBOX_FILE: str = ""
+INBOX_PATHS: list[Path] = []
 
 if not CONFIG_FILE_PATH.exists():
-    print_terminal(f"Config file not found! Please create a file at {CONFIG_FILE_PATH} containing the location of your inbox.txt file.")
+    print_terminal(f"Config file not found! Please create a file at {CONFIG_FILE_PATH} containing the location(s) of your inbox.txt files. You can put one file path per line.")
     sys.exit()
 
 # This value sets the initial interval in days.
@@ -57,15 +58,15 @@ INITIAL_INTERVAL: int = 50
 # review schedule to 50 days, which i don't want. maybe there should be some
 # way to make trivial changes without affecting the review schedule.
 
-DB_COLUMNS: list[str] = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
-              'ease_factor', 'interval', 'last_reviewed_on',
-              'created_on', 'reviewed_count', 'note_state']
+DB_COLUMNS: list[str] = ['sha1sum', 'line_number_start', 'line_number_end',
+                         'ease_factor', 'interval', 'last_reviewed_on',
+                         'created_on', 'reviewed_count', 'note_state',
+                         'filepath', 'note_text']
 
 
 @dataclass
 class Note:
     sha1sum: str
-    note_text: str
     line_number_start: int
     line_number_end: int
     ease_factor: int
@@ -74,25 +75,17 @@ class Note:
     created_on: datetime.date
     reviewed_count: int
     note_state: str
+    filepath: Path
+    note_text: str
 
     def __repr__(self) -> str:
         fragment = initial_fragment(self.note_text)
-        string = "Note(L%s-%s interval=%s ease_factor=%s note_state=%s reviewed_count=%s created_on=%s last_reviewed_on=%s %s)" % (
-                self.line_number_start,
-                self.line_number_end,
-                self.interval,
-                self.ease_factor,
-                self.note_state,
-                self.reviewed_count,
-                self.created_on,
-                self.last_reviewed_on,
-                fragment)
+        string = f"Note({self.filepath}:L{self.line_number_start}-{self.line_number_end} interval={self.interval} ease_factor={self.ease_factor} note_state={self.note_state} reviewed_count={self.reviewed_count} created_on={self.created_on} last_reviewed_on={self.last_reviewed_on} {fragment})"
         return string
 
     def to_db_row(self):
         return (
             self.sha1sum,
-            self.note_text,
             self.line_number_start,
             self.line_number_end,
             self.ease_factor,
@@ -101,46 +94,47 @@ class Note:
             self.created_on.strftime("%Y-%m-%d"),
             self.reviewed_count,
             self.note_state,
+            str(self.filepath),
+            self.note_text,
         )
+
+@dataclass
+class ParseChunk:
+    sha1sum: str
+    note_text: str
+    line_number_start: int
+    line_number_end: int
 
 
 if CONFIG_FILE_PATH.exists():
     with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
         for line in f:
-            if INBOX_FILE:
-                break
             if line.strip().startswith("#"):
                 continue
-            # Why do we have both the name and path? This simplifies the situation
-            # if the inbox files get moved around (e.g. if you have two different
-            # computers). As long as inbox_files.txt gives the right path for the
-            # same inbox names, it doesn't matter that the inbox files keep moving
-            # around; the database doesn't need to know where the inbox files are
-            # located, so the database does not need to be updated each time files
-            # move around.
-            # 2025-03-29: note that i'm simplifying things back down to just one
-            # file, so the format no longer has a name.
-            INBOX_FILE = line.strip()
+            path = Path(line.strip())
+            if not (path.exists() and path.is_file()):
+                print_terminal(f"Inbox file {path} not found! Are you sure it is a valid file? Make sure to expand out any abbreviations such as '~/'.", file=sys.stderr)
+                sys.exit()
+            INBOX_PATHS.append(path)
 
-if not INBOX_FILE:
-    print_terminal("Inbox file not found! Please create a file named "
-          "inbox_file.txt containing a single line that gives "
-          "the full filepath of where your inbox file is located.",
+if not INBOX_PATHS:
+    print_terminal(f"Inbox file not found! Does your {CONFIG_FILE_PATH} contain the locations of valid files?",
           file=sys.stderr)
     sys.exit()
 
 def note_from_db_row(row) -> Note:
     return Note(
         sha1sum=row[0],
-        note_text=row[1],
-        line_number_start=row[2],
-        line_number_end=row[3],
-        ease_factor=row[4],
-        interval=row[5],
-        last_reviewed_on=yyyymmdd_to_date(row[6]),
-        created_on=yyyymmdd_to_date(row[7]),
-        reviewed_count=row[8],
-        note_state=row[9],
+        line_number_start=row[1],
+        line_number_end=row[2],
+        ease_factor=row[3],
+        interval=row[4],
+        last_reviewed_on=yyyymmdd_to_date(row[5]),
+        created_on=yyyymmdd_to_date(row[6]),
+        reviewed_count=row[7],
+        note_state=row[8],
+        filepath=row[9],
+        note_text=row[10],
     )
 
 def get_notes_from_db(conn: Connection) -> list[Note]:
@@ -206,16 +200,22 @@ def main() -> None:
     elif args.compile:
         notes_from_db = reload_db(conn, log_level=0)
         for note in due_notes(notes_from_db):
+            inbox_file = note.filepath
             line_number = note.line_number_start
             column_number = 1
             line_fragment = initial_fragment(note.note_text)
-            print(f"{INBOX_FILE}:{line_number}:{column_number}:{line_fragment}")
+            print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
     else:
         notes_from_db = reload_db(conn)
         num_notes, num_due_notes = calc_stats(notes_from_db)
         print("Number of notes:", num_notes)
         print("Number of notes that are due:", num_due_notes)
         record_review_load(num_notes, num_due_notes)
+
+def tag_with_filename(filepath: Path) -> Callable[[ParseChunk], tuple[Path, ParseChunk]]:
+    def tag_it(pc: ParseChunk) -> tuple[Path, ParseChunk]:
+        return (filepath, pc)
+    return tag_it
 
 
 def reload_db(conn: Connection, log_level=1) -> list[Note]:
@@ -225,14 +225,17 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
         """.format(cols=", ".join(DB_COLUMNS),)
     ).fetchall()
     notes_db = [note_from_db_row(row) for row in fetched]
-    if log_level > 0:
-        print("Importing new notes from {}... ".format(INBOX_FILE),
-              file=sys.stderr, end="")
-    with open(INBOX_FILE, "r", encoding="utf-8") as f:
-        current_inbox = parse_inbox(f)
+    current_inbox: list[tuple[Path, ParseChunk]] = []
+    for path in INBOX_PATHS:
+        if log_level > 0:
+            print("Importing new notes from {}... ".format(path),
+                  file=sys.stderr, end="")
+        with open(path, "r", encoding="utf-8") as f:
+            current_inbox.extend(map(tag_with_filename(path),
+                                     parse_inbox(f)))
+        if log_level > 0:
+            print("done.", file=sys.stderr)
     update_notes_db(conn, notes_db, current_inbox, log_level)
-    if log_level > 0:
-        print("done.", file=sys.stderr)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
@@ -263,12 +266,12 @@ def is_yyyymmdd_date(s: str) -> bool:
         return False
     return True
 
-def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
+def parse_inbox(lines: TextIOWrapper) -> list[ParseChunk]:
     """Parsing rules:
     - two or more blank lines in a row start a new note
     - a line with three or more equals signs and nothing else starts a new note
     """
-    result = []
+    result: list[ParseChunk] = []
     note_text = ""
     state = "text"
     # This is a finite state machine with three states (text, 1 newline, 2+
@@ -296,16 +299,16 @@ def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append((sha1sum(note_text.strip()), note_text,
+                result.append(ParseChunk(sha1sum(note_text.strip()), note_text,
                                line_number_start, line_number - 1))
                 line_number_start = line_number
                 note_text = line + "\n"
             # else: state remains the same
     # We ended the loop above without adding the final note, so add it now
-    result.append((sha1sum(note_text.strip()), note_text,
+    result.append(ParseChunk(sha1sum(note_text.strip()), note_text,
                    line_number_start, line_number))
     # Filter out all the date separator entries
-    result = [x for x in result if x[1] and not is_yyyymmdd_date(x[1])]
+    result = [pc for pc in result if pc.note_text and not is_yyyymmdd_date(pc.note_text)]
     return result
 
 
@@ -317,7 +320,7 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[str, str, int, int]], log_level=1) -> None:
+def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -326,16 +329,15 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
     db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
     inbox_size = len(current_inbox)
-    for (sha1sum, note_text, line_number_start,
-         line_number_end) in current_inbox:
-        if sha1sum in db_hashes and db_hashes[sha1sum].interval >= 0:
+    for inbox_filepath, pc in current_inbox:
+        if pc.sha1sum in db_hashes and db_hashes[pc.sha1sum].interval >= 0:
             # The note content is not new, but the position in the file may
             # have changed, so update the line numbers
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?
                          where sha1sum = ?""",
-                      (line_number_start, line_number_end, sha1sum))
-        elif sha1sum in db_hashes:
+                      (pc.line_number_start, pc.line_number_end, pc.sha1sum))
+        elif pc.sha1sum in db_hashes:
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
             # reset the review schedule.
@@ -347,9 +349,9 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                           reviewed_count = ?,
                                           note_state = ?
                          where sha1sum = ?""",
-                      (line_number_start, line_number_end, 300, INITIAL_INTERVAL,
+                      (pc.line_number_start, pc.line_number_end, 300, INITIAL_INTERVAL,
                        datetime.date.today().strftime("%Y-%m-%d"),
-                       None, 0, "normal", sha1sum))
+                       None, 0, "normal", pc.sha1sum))
         else:
             # The note content is new.
             note_number += 1
@@ -357,21 +359,27 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                 c.execute("insert into notes (%s) values (%s)"
                           % (", ".join(DB_COLUMNS),
                              ", ".join(["?"]*len(DB_COLUMNS))),
-                          Note(sha1sum, note_text, line_number_start,
-                               line_number_end, ease_factor=300, interval=INITIAL_INTERVAL,
+                          Note(sha1sum=pc.sha1sum,
+                               line_number_start=pc.line_number_start,
+                               line_number_end=pc.line_number_end,
+                               ease_factor=300,
+                               interval=INITIAL_INTERVAL,
                                last_reviewed_on=datetime.date.today(),
                                created_on=datetime.date.today(),
                                reviewed_count=0,
-                               note_state="normal").to_db_row())
+                               note_state="normal",
+                               filepath=inbox_filepath,
+                               note_text=pc.note_text,
+                            ).to_db_row())
             except sqlite3.IntegrityError:
-                print("Duplicate note text found! Please remove all duplicates and then re-import.", note_text, file=sys.stderr)
+                print("Duplicate note text found! Please remove all duplicates and then re-import.", pc.note_text, file=sys.stderr)
                 sys.exit()
     conn.commit()
     if log_level > 0:
         print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
     # Soft-delete any notes that no longer exist in the current inbox
-    inbox_hashes = set(sha1sum for (sha1sum, _, _, _) in current_inbox)
+    inbox_hashes = set(pc.sha1sum for _, pc in current_inbox)
     delete_count = 0
     for note in notes_db:
         if note.sha1sum not in inbox_hashes and note.interval >= 0:
@@ -543,7 +551,7 @@ def interact_loop(conn: Connection) -> None:
                 """ % (
                     # since the db only stores the inbox name, we must look up
                     # the filepath from INBOX_FILES
-                    INBOX_FILE.replace("\\", r"\\\\"),
+                    "FIXME", # INBOX_FILE.replace("\\", r"\\\\"),
                     loc
                 )).replace("\n", " ").strip()
                 emacsclient = "emacsclient"
