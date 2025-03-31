@@ -64,6 +64,22 @@ DB_COLUMNS: list[str] = ['sha1sum', 'line_number_start', 'line_number_end',
                          'created_on', 'reviewed_count', 'note_state',
                          'filepath', 'note_text']
 
+def is_yyyymmdd_date(s: str) -> bool:
+    """If the string is a YYYY-MM-DD date string like "2025-03-30" then return
+    True, otherwise return False."""
+    match = re.match(r'(\d\d\d\d)-(\d\d)-(\d\d)$', s)
+    if not match:
+        return False
+    year, month, day = map(int, match.groups())
+    # This is not a perfect algorithm, but it will be good enough for our
+    # purposes. Might fix it at some point.
+    if year < 1960:
+        return False
+    if not (1 <= month <= 12):
+        return False
+    if not (1 <= day <= 31):
+        return False
+    return True
 
 @dataclass
 class Note:
@@ -107,8 +123,17 @@ class ParseChunk:
     line_number_end: int
     note_state: str = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.note_state = "normal"
+
+        # The date separator entries don't contain any actual content, so we
+        # blank them out so that they will get filtered out and won't be stored
+        # in the database.
+        if is_yyyymmdd_date(self.note_text.strip()):
+            self.note_text = ""
+            self.sha1sum = sha1sum(self.note_text.strip())
+            return
+
         new_note_text = ""
         for line in self.note_text.splitlines(keepends=True):
             match = re.match(r'\d\d\d\d-\d\d-\d\d: #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
@@ -244,22 +269,6 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
 def clear_screen() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def is_yyyymmdd_date(s: str) -> bool:
-    """If the string is a YYYY-MM-DD date string like "2025-03-30" then return
-    True, otherwise return False."""
-    match = re.match(r'(\d\d\d\d)-(\d\d)-(\d\d)$', s)
-    if not match:
-        return False
-    year, month, day = map(int, match.groups())
-    # This is not a perfect algorithm, but it will be good enough for our
-    # purposes. Might fix it at some point.
-    if year < 1960:
-        return False
-    if not (1 <= month <= 12):
-        return False
-    if not (1 <= day <= 31):
-        return False
-    return True
 
 def parse_inbox(lines: TextIOWrapper) -> list[ParseChunk]:
     """Parsing rules:
@@ -302,8 +311,8 @@ def parse_inbox(lines: TextIOWrapper) -> list[ParseChunk]:
     # We ended the loop above without adding the final note, so add it now
     result.append(ParseChunk(sha1sum(note_text.strip()), note_text,
                    line_number_start, line_number))
-    # Filter out all the date separator entries
-    result = [pc for pc in result if pc.note_text and not is_yyyymmdd_date(pc.note_text)]
+    # Filter out blank notes
+    result = [pc for pc in result if pc.note_text]
     return result
 
 
