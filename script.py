@@ -201,8 +201,7 @@ def main() -> None:
             print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
     elif args.compile:
         notes_from_db = reload_db(conn, log_level=0)
-        # TODO: probably sort before printing.
-        for note in due_notes(notes_from_db):
+        for note in sorted(due_notes(notes_from_db), key=lambda n: (n.filepath, n.line_number_start)):
             inbox_file = note.filepath
             line_number = note.line_number_start
             column_number = 1
