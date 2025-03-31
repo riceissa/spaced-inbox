@@ -165,37 +165,13 @@ def get_notes_from_db(conn: Connection) -> list[Note]:
 
 
 def main() -> None:
-    # 2025-03-30: Here's the commandline flags i am currently thinking of:
-    # ./script -n    => just print the line number of where to jump to
-    #     (i.e. the note to be reviewed), to stdout (or print nothing or -1
-    #     if there's no note to be reviewed). this will be like how the
-    #     current elisp implementation works. different editors can call
-    #     this script, parse the line number, then jump to that line in
-    #     however way they want.
-    # ./script --compile   => print all the due notes in a vim quickfix
-    #     or emacs M-x compile like fashion, to stdout or stderr. Basically,
-    #     the script acts like a "compiler" for your notes.
-    # ./script   => just import notes without doing anything else, but
-    #     print what happened. basically the way currently how --no-review
-    #     works
-    # we won't need an --external-program flag anymore because different
-    # editors can write their own mini-plugins to work with the -n
-    # option.
-    # i'm also thinking of removing the interactive thing entirely,
-    # rather than keeping it as like a ./script --interactive  flag.
-    # because the whole point is to just always have your inbox file
-    # open to jot down ideas. you're already in your editor. you don't
-    # want to go and open another program to do your reviews. that's too
-    # much friction.
-
     parser = argparse.ArgumentParser()
-    # The following flag is useful if you just want to import new notes as a
-    # cronjob or something, and don't want to get trapped in the interact loop.
+    format_help = "The printed format is <filename>:<line number>:<column number>:<starting fragment of the note>. This format is intended to be used by text editors such as Vim and Emacs."
     parser.add_argument("-c", "--compile",
-                        help=("compiler mode"),
+                        help=(f"Print all the \"due\" notes. {format_help} Essentially, this flag allows this script to act like a \"compiler\" for your notes, allowing you to jump to whichever \"due\" note you select (as long as your text editor supports navigating such output)."),
                         action="store_true")
     parser.add_argument("-r", "--roll",
-                        help=("just print the line number to jump to"),
+                        help=(f"Pick a random note to review. The note is chosen by the scheduling algorithm. Repeatedly running the script with this flag will allow you to do a \"review session\" where you review and edit notes in a sequence. {format_help}"),
                         action="store_true")
     args = parser.parse_args()
     if args.compile and args.roll:
@@ -227,6 +203,9 @@ def main() -> None:
             line_fragment = initial_fragment(note.note_text)
             print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
     else:
+        # The following (i.e. not passing in any flags, the default action) is
+        # useful if you just want to import new notes as a cronjob or
+        # something, and don't want to do a review.
         notes_from_db = reload_db(conn)
         num_notes, num_due_notes = calc_stats(notes_from_db)
         print("Number of notes:", num_notes)
