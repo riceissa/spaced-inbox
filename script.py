@@ -378,7 +378,7 @@ def update_notes_db(conn: Connection, notes_db: list[Note], current_inbox: list[
                                created_on=datetime.date.today(),
                                reviewed_count=0,
                                note_state="normal",
-                               filepath=str(inbox_filepath),
+                               filepath=inbox_filepath,
                                note_text=pc.note_text,
                             ).to_db_row())
             except sqlite3.IntegrityError:
