@@ -111,6 +111,10 @@ if CONFIG_FILE_PATH.exists():
     with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip().startswith("#"):
+                # Lines starting with # are comments
+                continue
+            if not line.strip():
+                # Skip blank lines as well
                 continue
             path = Path(line.strip())
             if not (path.exists() and path.is_file()):
