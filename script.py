@@ -30,6 +30,7 @@ def print_terminal(string: str, file=None) -> None:
 CONFIG_FILE_PATH: Path = Path("~/.config/spaced-inbox/config.txt").expanduser()
 DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+REVIEW_LOAD_PATH: Path = Path("~/.local/share/spaced-inbox/review-load.csv").expanduser()
 INBOX_PATHS: list[Path] = []
 
 if not CONFIG_FILE_PATH.exists():
@@ -533,10 +534,10 @@ def calc_stats(notes: list[Note]) -> tuple[int, int]:
     return (num_notes, num_due_notes)
 
 def record_review_load(num_notes: int, num_due_notes: int) -> None:
-    if not os.path.isfile("review-load.csv"):
-        with open("review-load.csv", "w", encoding="utf-8") as review_load_file:
+    if not (REVIEW_LOAD_PATH.exists() and REVIEW_LOAD_PATH.is_file()):
+        with open(REVIEW_LOAD_PATH, "w", encoding="utf-8") as review_load_file:
             review_load_file.write("timestamp,num_notes,num_due_notes\n")
-    with open("review-load.csv", "a", encoding="utf-8") as review_load_file:
+    with open(REVIEW_LOAD_PATH, "a", encoding="utf-8") as review_load_file:
         review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
 
 def interact_loop(conn: Connection) -> None:
