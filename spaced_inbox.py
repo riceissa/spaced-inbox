@@ -82,6 +82,11 @@ def is_yyyymmdd_date(s: str) -> bool:
     return True
 
 @dataclass
+class React:
+    date: datetime.date
+    react: str
+
+@dataclass
 class Note:
     sha1sum: str
     line_number_start: int
@@ -122,6 +127,7 @@ class ParseChunk:
     line_number_start: int
     line_number_end: int
     note_state: str = field(init=False)
+    reacts: list[React] = field(init=False)
 
     def __post_init__(self) -> None:
         self.note_state = "normal"
@@ -135,12 +141,24 @@ class ParseChunk:
             return
 
         new_note_text = ""
+        self.reacts = []
         for line in self.note_text.splitlines(keepends=True):
-            match = re.match(r'\d\d\d\d-\d\d-\d\d: #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+            match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
             if match:
-                self.note_state = match.group(1)
+                try:
+                    react_date = datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date()
+                    react_text = match.group(2)
+                    react = React(react_date, react_text)
+                    self.reacts.append(react)
+                except ValueError:
+                    # Failed to parse date, so must not be a reaction after
+                    # all.
+                    new_note_text += line
             else:
                 new_note_text += line
+        if self.reacts:
+            # Grab the most recent reaction
+            self.note_state = sorted(self.reacts, key=lambda r: r.date)[-1].react
         self.note_text = new_note_text
         self.sha1sum = sha1sum(self.note_text.strip())
 
@@ -331,6 +349,9 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
     """
+    # TODO(2025-03-31): currently if a new reaction is detected, it's not used
+    # to do an implicit review. but this should be done, because we took away
+    # the interact loop so now the only way to do reviews is implicitly.
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
     c = conn.cursor()
@@ -644,8 +665,6 @@ def human_friendly_time(days: float) -> str:
 
 def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
-
-
 
 
 if __name__ == "__main__":
