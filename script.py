@@ -117,6 +117,7 @@ class ParseChunk:
             else:
                 new_note_text += line
         self.note_text = new_note_text
+        self.sha1sum = sha1sum(self.note_text.strip())
 
 
 if CONFIG_FILE_PATH.exists():
