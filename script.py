@@ -28,6 +28,7 @@ def print_terminal(string: str, file=None) -> None:
 
 CONFIG_FILE_PATH: Path = Path("~/.config/spaced-inbox/config.txt").expanduser()
 DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 INBOX_FILE: str = ""
 
 if not CONFIG_FILE_PATH.exists():
@@ -187,13 +188,13 @@ def main() -> None:
     if args.compile and args.number:
         print_terminal("You cannot use both --compile/-c and --number/-n simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
         sys.exit()
-    if not os.path.isfile("data.db"):
+    if not (DB_PATH.exists() and DB_PATH.is_file()):
         with open("schema.sql", "r", encoding="utf-8") as f:
-            conn = sqlite3.connect('data.db')
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.executescript(f.read())
     else:
-        conn = sqlite3.connect('data.db')
+        conn = sqlite3.connect(DB_PATH)
 
     if args.number:
         notes_from_db = reload_db(conn, log_level=0)
@@ -266,7 +267,6 @@ def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
     """Parsing rules:
     - two or more blank lines in a row start a new note
     - a line with three or more equals signs and nothing else starts a new note
-
     """
     result = []
     note_text = ""
@@ -305,7 +305,7 @@ def parse_inbox(lines: TextIOWrapper) -> list[tuple[str, str, int, int]]:
     result.append((sha1sum(note_text.strip()), note_text,
                    line_number_start, line_number))
     # Filter out all the date separator entries
-    result = [x for x in result if not is_yyyymmdd_date(x[1])]
+    result = [x for x in result if x[1] and not is_yyyymmdd_date(x[1])]
     return result
 
 
