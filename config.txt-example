@@ -1,4 +1,16 @@
+# Lines starting with # are comments.
+# Blank lines are also skipped.
+
+# Store this file at ~/.config/spaced-inbox/config.txt
+
+# Put each of your inbox files on its own line:
 /home/issa/projects/notes/inbox.txt
 /home/issa/projects/notes/ai-safety-inbox.txt
 /home/issa/projects/notes/questions.txt
 /home/issa/projects/notes/project-ideas.txt
+
+# Equivalent lines for Windows:
+C:\Users\Issa\projects\notes\inbox.txt
+C:\Users\Issa\projects\notes\ai-safety-inbox.txt
+C:\Users\Issa\projects\notes\questions.txt
+C:\Users\Issa\projects\notes\project-ideas.txt
