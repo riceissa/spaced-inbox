@@ -407,7 +407,18 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                 new_react_added_number += 1
             else:
                 unchanged_number += 1
-            result.append(Note(pc.sha1sum, pc.line_number_start, pc.line_number_end, note_from_db.ease_factor, new_interval, new_last_reviewed_on, note_from_db.created_on, new_reviewed_count, new_note_state, inbox_filepath, pc.note_text))
+            new_note = Note(pc.sha1sum,
+                            pc.line_number_start,
+                            pc.line_number_end,
+                            note_from_db.ease_factor,
+                            new_interval,
+                            new_last_reviewed_on,
+                            note_from_db.created_on,
+                            new_reviewed_count,
+                            new_note_state,
+                            inbox_filepath,
+                            pc.note_text)
+            result.append(new_note)
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           filepath = ?,
@@ -417,20 +428,32 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                           note_state = ?,
                                           note_text = ?
                          where sha1sum = ?""", (
-                                          pc.line_number_start,
-                                          pc.line_number_end,
-                                          str(inbox_filepath),
-                                          new_interval,
-                                          new_last_reviewed_on.strftime("%Y-%m-%d"),
-                                          new_reviewed_count,
-                                          new_note_state,
-                                          pc.note_text,
-                         pc.sha1sum,
+                                          new_note.line_number_start,
+                                          new_note.line_number_end,
+                                          str(new_note.filepath),
+                                          new_note.interval,
+                                          new_note.last_reviewed_on.strftime("%Y-%m-%d"),
+                                          new_note.reviewed_count,
+                                          new_note.note_state,
+                                          new_note.note_text,
+                         new_note.sha1sum,
             ))
         elif pc.sha1sum in db_hashes:
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
             # reset the review schedule.
+            new_note = Note(pc.sha1sum,
+                            pc.line_number_start,
+                            pc.line_number_end,
+                            300,
+                            INITIAL_INTERVAL,
+                            datetime.date.today(),
+                            note_from_db.created_on,
+                            0,
+                            "normal",
+                            inbox_filepath,
+                            pc.note_text)
+            result.append(new_note)
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           ease_factor = ?,
@@ -441,18 +464,17 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                           filepath = ?,
                                           note_text
                          where sha1sum = ?""", (
-                                          pc.line_number_start,
-                                          pc.line_number_end,
-                                          300,
-                                          INITIAL_INTERVAL,
-                                          datetime.date.today().strftime("%Y-%m-%d"),
-                                          0,
-                                          "normal",
-                                          str(inbox_filepath),
-                                          pc.note_text,
-                         pc.sha1sum))
+                                          new_note.line_number_start,
+                                          new_note.line_number_end,
+                                          new_note.ease_factor,
+                                          new_note.interval,
+                                          new_note.last_reviewed_on.strftime("%Y-%m-%d"),
+                                          new_note.reviewed_count,
+                                          new_note.note_state,
+                                          str(new_note.filepath),
+                                          new_note.note_text,
+                         new_note.sha1sum))
             resurrected_number += 1
-            result.append(Note(pc.sha1sum, pc.line_number_start, pc.line_number_end, 300, INITIAL_INTERVAL, datetime.date.today(), note_from_db.created_on, 0, "normal", inbox_filepath, pc.note_text))
         else:
             # The note content is new.
             note_number += 1
