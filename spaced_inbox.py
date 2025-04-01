@@ -249,9 +249,6 @@ def main() -> None:
                         help=(f"Pick a random note to review. The note is chosen by the scheduling algorithm. Repeatedly running the script with this flag will allow you to do a \"review session\" where you review and edit notes in a sequence. {format_help}"),
                         action="store_true")
     args = parser.parse_args()
-    if args.compile and args.roll:
-        print_terminal("You cannot use both --compile/-c and --roll/-r simultaneously, as they both change how the output is printed. Please pick one or the other.", file=sys.stderr)
-        sys.exit()
     if not (DB_PATH.exists() and DB_PATH.is_file()):
         script_dir = Path(__file__).parent.absolute()
         schema_location = script_dir / "schema.sql"
@@ -271,7 +268,7 @@ def main() -> None:
             column_number = 1
             line_fragment = initial_fragment(note.note_text)
             print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
-    elif args.compile:
+    if args.compile:
         notes_from_db = reload_db(conn, log_level=0)
         for note in sorted(due_notes(notes_from_db), key=lambda n: (n.filepath, n.line_number_start)):
             inbox_file = note.filepath
@@ -279,7 +276,7 @@ def main() -> None:
             column_number = 1
             line_fragment = initial_fragment(note.note_text)
             print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
-    else:
+    if not (args.roll or args.compile):
         # The following (i.e. not passing in any flags, the default action) is
         # useful if you just want to import new notes as a cronjob or
         # something, and don't want to do a review.
