@@ -354,11 +354,11 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 def reload_db(conn: Connection, log_level=1) -> list[Note]:
-    """
-    Add new notes to db.
-    Remove notes from db if they no longer exist in the notes file?
-    Return the new notes by combining the current inbox and what's already in the db.
-    """
+    """Parses all the inbox text files to get the list of notes in the current
+    inbox. Then uses the current inbox to update the database. Returns the list
+    of notes from the current inbox (augmented with information from the
+    database such as the created_on date of the note, which cannot be
+    determined solely from the current inbox files)."""
     current_inbox: list[tuple[Path, ParseChunk]] = []
     for path in INBOX_PATHS:
         if log_level > 0:
