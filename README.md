@@ -147,10 +147,7 @@ Add the following to your `~/.emacs.d/init.el` file:
               (spaced-inbox--navigate-from-string output))))))
 ```
 
-Make sure to replace the `"spaced_inbox.py -r"` part with whatever command is
-visible from within Emacs. Emacs sometimes has trouble with using the shell's
-`PATH` variable, so you may need to provide an absolute path to the
-`spaced_inbox.py` script. You may even need to prefix the command with
+Make sure to replace `/path/to/spaced_inbox.py` with the actual path to the script. You may even need to prefix the command with
 `python3` or `py.exe`.  To debug the executable location, I recommend doing
 `M-x compile`, deleting the default `make -k `, and then entering whatever
 spaced inbox command you want to try out.  In fact, if you want, you can just
