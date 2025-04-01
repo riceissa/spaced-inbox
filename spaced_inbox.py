@@ -306,15 +306,15 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                      parse_inbox(f)))
         if log_level > 0:
             print("done.", file=sys.stderr)
-    update_notes_db(conn, current_inbox, log_level)
+    updated = update_notes_db(conn, current_inbox, log_level)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
     # some notes may have been deleted). This fixes a bug where if a note is
     # due, then I edit it and type 'quit' and then re-run the script, the note
     # is still due.
-    combined_notes_db = get_notes_from_db(conn)
-    return combined_notes_db
+    # combined_notes_db = get_notes_from_db(conn)
+    return updated
 
 
 def clear_screen() -> None:
@@ -374,11 +374,13 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
+def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> list[Note]:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
+    Return the new notes by combining the current inbox and what's already in the db.
     """
+    result: list[Note] = []
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files... ", end="", file=sys.stderr)
     c = conn.cursor()
@@ -415,6 +417,7 @@ def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk
                 new_react_added_number += 1
             else:
                 unchanged_number += 1
+            result.append(Note(pc.sha1sum, pc.line_number_start, pc.line_number_end, note_from_db.ease_factor, new_interval, new_last_reviewed_on, note_from_db.created_on, new_reviewed_count, new_note_state, inbox_filepath, pc.note_text))
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           filepath = ?,
@@ -459,14 +462,12 @@ def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk
                                           pc.note_text,
                          pc.sha1sum))
             resurrected_number += 1
+            result.append(Note(pc.sha1sum, pc.line_number_start, pc.line_number_end, 300, INITIAL_INTERVAL, datetime.date.today(), note_from_db.created_on, 0, "normal", inbox_filepath, pc.note_text))
         else:
             # The note content is new.
             note_number += 1
             try:
-                c.execute("insert into notes (%s) values (%s)"
-                          % (", ".join(DB_COLUMNS),
-                             ", ".join(["?"]*len(DB_COLUMNS))),
-                          Note(sha1sum=pc.sha1sum,
+                new_note = Note(sha1sum=pc.sha1sum,
                                line_number_start=pc.line_number_start,
                                line_number_end=pc.line_number_end,
                                ease_factor=300,
@@ -477,11 +478,15 @@ def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk
                                note_state="normal",
                                filepath=inbox_filepath,
                                note_text=pc.note_text,
-                            ).to_db_row())
+                            )
+                c.execute("insert into notes (%s) values (%s)"
+                          % (", ".join(DB_COLUMNS),
+                             ", ".join(["?"]*len(DB_COLUMNS))),
+                          new_note.to_db_row())
+                result.append(new_note)
             except sqlite3.IntegrityError:
                 print("Duplicate note text found! Please remove all duplicates and then re-import.", pc.note_text, file=sys.stderr)
                 sys.exit()
-    conn.commit()
     if log_level > 0:
         print(f"{note_number} new notes found, ", file=sys.stderr, end="")
         print(f"{new_react_added_number} pre-existing notes got a new react, ", file=sys.stderr, end="")
@@ -501,6 +506,7 @@ def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk
         print(f"{delete_count} notes were soft-deleted... ", file=sys.stderr,
               end="")
         print("done.", file=sys.stderr)
+    return result
 
 
 def due_notes(notes_from_db: list[Note]) -> list[Note]:
