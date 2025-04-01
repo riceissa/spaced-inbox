@@ -136,13 +136,17 @@ Add the following to your `~/.emacs.d/init.el` file:
 
 (defun roll ()
   (interactive)
-  (let ((spaced-inbox-command "spaced_inbox.py -r"))
-    (message "Running spaced inbox script via: %s ..." spaced-inbox-command)
-    (let ((output (string-trim (shell-command-to-string spaced-inbox-command))))
-      (if (string-empty-p output)
-          (message "Spaced inbox script produced no output.")
-        (progn
-          (spaced-inbox--navigate-from-string output))))))
+  (let* ((spaced-inbox-executable "/path/to/spaced_inbox.py")
+         (flags "-r")
+         (spaced-inbox-command (concat spaced-inbox-executable " " flags)))
+    (if (not (file-executable-p spaced-inbox-executable))
+        (message "Could not find the executable %s. Please make sure to provide the full path to the executable." spaced-inbox-executable)
+      (progn
+        (message "Running spaced inbox script via: %s ..." spaced-inbox-command)
+        (let* ((output (string-trim (shell-command-to-string spaced-inbox-command))))
+          (if (string-empty-p output)
+              (message "Spaced inbox script produced no output.")
+              (spaced-inbox--navigate-from-string output)))))))
 ```
 
 Make sure to replace the `"spaced_inbox.py -r"` part with whatever command is
