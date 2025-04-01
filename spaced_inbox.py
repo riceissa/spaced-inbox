@@ -198,7 +198,21 @@ if not INBOX_PATHS:
           file=sys.stderr)
     sys.exit()
 
-def note_from_db_row(row) -> Note:
+def note_from_db_row(row, has_note_text=True) -> Note:
+    if has_note_text:
+        return Note(
+            sha1sum=row[0],
+            line_number_start=row[1],
+            line_number_end=row[2],
+            ease_factor=row[3],
+            interval=row[4],
+            last_reviewed_on=yyyymmdd_to_date(row[5]),
+            created_on=yyyymmdd_to_date(row[6]),
+            reviewed_count=row[7],
+            note_state=row[8],
+            filepath=row[9],
+            note_text=row[10],
+        )
     return Note(
         sha1sum=row[0],
         line_number_start=row[1],
@@ -210,15 +224,18 @@ def note_from_db_row(row) -> Note:
         reviewed_count=row[7],
         note_state=row[8],
         filepath=row[9],
-        note_text=row[10],
+        note_text="",
     )
 
-def get_notes_from_db(conn: Connection) -> list[Note]:
+
+def get_notes_from_db(conn: Connection, fetch_note_text=True) -> list[Note]:
     cursor = conn.cursor()
-    columns = ", ".join(DB_COLUMNS)
-    query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath, substr(note_text, 1, 20) as note_text from notes"
+    if fetch_note_text:
+        query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath, note_text from notes"
+    else:
+        query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath from notes"
     rows = cursor.execute(query).fetchall()
-    result = [note_from_db_row(row) for row in rows]
+    result = [note_from_db_row(row, has_note_text=fetch_note_text) for row in rows]
     return result
 
 
@@ -365,11 +382,7 @@ def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files... ", end="", file=sys.stderr)
     c = conn.cursor()
-    # TODO(2025-04-01): we need a lot of the metadata for each note, but not
-    # the note_text itself, which is most of the bytes of a note, so i'm
-    # wondering if things can be sped up if i exclude note_text from the query
-    # that generated notes_from_db.
-    notes_from_db = get_notes_from_db(conn)
+    notes_from_db = get_notes_from_db(conn, fetch_note_text=False)
     db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
     unchanged_number = 0
