@@ -341,15 +341,13 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
     """
-    # TODO(2025-03-31): currently if a new reaction is detected, it's not used
-    # to do an implicit review. but this should be done, because we took away
-    # the interact loop so now the only way to do reviews is implicitly.
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
     c = conn.cursor()
-    # TODO(2025-04-01): i think we only need the hashes+interval from the db,
-    # so instead of notes_from_db we can just query the db for
-    # hashes+intervals?
+    # TODO(2025-04-01): we need a lot of the metadata for each note, but not
+    # the note_text itself, which is most of the bytes of a note, so i'm
+    # wondering if things can be sped up if i exclude note_text from the query
+    # that generated notes_from_db.
     db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
     inbox_size = len(current_inbox)
@@ -389,7 +387,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
                                           pc.line_number_end,
                                           str(inbox_filepath),
                                           new_interval,
-                                          new_last_reviewed_on,
+                                          new_last_reviewed_on.strftime("%Y-%m-%d"),
                                           new_reviewed_count,
                                           new_note_state,
                                           pc.note_text,
