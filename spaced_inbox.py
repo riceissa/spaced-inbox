@@ -89,7 +89,7 @@ def is_yyyymmdd_date(s: str) -> bool:
 @dataclass
 class React:
     date: datetime.date
-    react: str
+    text: str
 
 @dataclass
 class Note:
@@ -140,12 +140,10 @@ class ParseChunk:
     line_number_end: int
 
     sha1sum: str = field(init=False)
-    note_state: str = field(init=False)
     reacts: list[React] = field(init=False)
 
     def __post_init__(self) -> None:
         self.note_text = self.note_text.strip()
-        self.note_state = "normal"
 
         # The date separator entries don't contain any actual content, so we
         # blank them out so that they will get filtered out and won't be stored
@@ -156,10 +154,6 @@ class ParseChunk:
             return
 
         self.sha1sum, self.reacts = hash_and_reacts(self.note_text)
-
-        if self.reacts:
-            # Grab the most recent reaction
-            self.note_state = self.reacts[-1].react
 
 
 if CONFIG_FILE_PATH.exists():
@@ -381,7 +375,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
                 new_interval = good_interval(note_from_db.interval, note_from_db.ease_factor)
                 new_last_reviewed_on = pc.reacts[-1].date
                 new_reviewed_count += 1
-                new_note_state = pc.reacts[-1].react
+                new_note_state = pc.reacts[-1].text
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           filepath = ?,
