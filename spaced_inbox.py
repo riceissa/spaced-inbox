@@ -150,7 +150,7 @@ class ParseChunk:
         # in the database.
         if is_yyyymmdd_date(self.note_text):
             self.note_text = ""
-            self.sha1sum = sha1sum(self.note_text.strip())
+            self.sha1sum = sha1sum(self.note_text)
             return
 
         to_be_hashed = ""
@@ -172,6 +172,10 @@ class ParseChunk:
                 to_be_hashed += line
         self.reacts.sort(key=lambda r: r.date)
         self.sha1sum = sha1sum(to_be_hashed.strip())
+        if not to_be_hashed:
+            # The note consists solely of a reaction, so the actual note text
+            # itself would be empty, so exclude such notes
+            self.note_text = ""
 
 
 if CONFIG_FILE_PATH.exists():
