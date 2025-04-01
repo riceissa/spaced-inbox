@@ -159,7 +159,7 @@ class ParseChunk:
 
         if self.reacts:
             # Grab the most recent reaction
-            self.note_state = sorted(self.reacts, key=lambda r: r.date)[-1].react
+            self.note_state = self.reacts[-1].react
 
 
 if CONFIG_FILE_PATH.exists():
@@ -353,39 +353,78 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
     c = conn.cursor()
+    # TODO(2025-04-01): i think we only need the hashes+interval from the db,
+    # so instead of notes_from_db we can just query the db for
+    # hashes+intervals?
     db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
     inbox_size = len(current_inbox)
+
+    inbox_filepath: Path
+    pc: ParseChunk
     for inbox_filepath, pc in current_inbox:
-        if pc.sha1sum in db_hashes and db_hashes[pc.sha1sum].interval >= 0:
-            # The note content is not new, but the position in the file (as
-            # well as the file in which the note appears) may have changed, so
-            # update the line numbers and filepath.
-            # TODO(2025-03-30): do we need to update more fields? same question
-            # for the other update commands below.
+        note_from_db: Note = db_hashes[pc.sha1sum]
+        if pc.sha1sum in db_hashes and note_from_db.interval >= 0:
+            # The note content is not new, but the following things may have
+            # changed:
+            #     - the file in which the note appears
+            #     - the position in the file
+            #     - new reacts may have been added, which means interval,
+            #       last_reviewed_on, reviewed_count, and note_state
+            #       need to be changed
+            # So we need to update these things.
+            new_interval = note_from_db.interval
+            new_last_reviewed_on = note_from_db.last_reviewed_on
+            new_reviewed_count = note_from_db.reviewed_count
+            new_note_state = note_from_db.note_state
+            if pc.reacts and pc.reacts[-1].date >= note_from_db.last_reviewed_on:
+                new_interval = good_interval(note_from_db.interval, note_from_db.ease_factor)
+                new_last_reviewed_on = pc.reacts[-1].date
+                new_reviewed_count += 1
+                new_note_state = pc.reacts[-1].react
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
-                                          filepath = ?
-                         where sha1sum = ?""",
-                      (pc.line_number_start, pc.line_number_end,
-                       str(inbox_filepath), pc.sha1sum))
+                                          filepath = ?,
+                                          interval = ?,
+                                          last_reviewed_on = ?,
+                                          reviewed_count = ?,
+                                          note_state = ?,
+                                          note_text = ?
+                         where sha1sum = ?""", (
+                                          pc.line_number_start,
+                                          pc.line_number_end,
+                                          str(inbox_filepath),
+                                          new_interval,
+                                          new_last_reviewed_on,
+                                          new_reviewed_count,
+                                          new_note_state,
+                                          pc.note_text,
+                         pc.sha1sum,
+            ))
         elif pc.sha1sum in db_hashes:
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
             # reset the review schedule.
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
-                                          filepath = ?,
                                           ease_factor = ?,
                                           interval = ?,
                                           last_reviewed_on = ?,
                                           reviewed_count = ?,
-                                          note_state = ?
-                         where sha1sum = ?""",
-                      (pc.line_number_start, pc.line_number_end,
-                       str(inbox_filepath), 300, INITIAL_INTERVAL,
-                       datetime.date.today().strftime("%Y-%m-%d"),
-                       0, "normal", pc.sha1sum))
+                                          note_state = ?,
+                                          filepath = ?,
+                                          note_text
+                         where sha1sum = ?""", (
+                                          pc.line_number_start,
+                                          pc.line_number_end,
+                                          300,
+                                          INITIAL_INTERVAL,
+                                          datetime.date.today().strftime("%Y-%m-%d"),
+                                          0,
+                                          "normal",
+                                          str(inbox_filepath),
+                                          pc.note_text,
+                         pc.sha1sum))
         else:
             # The note content is new.
             note_number += 1
@@ -682,6 +721,7 @@ def hash_and_reacts(note_text: str) -> tuple[str, list[React]]:
                 pass
         if not is_react:
             to_be_hashed += line
+    reacts.sort(key=lambda r: r.date)
     return (sha1sum(to_be_hashed.strip()), reacts)
 
 
