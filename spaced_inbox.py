@@ -135,45 +135,31 @@ class Note:
 
 @dataclass
 class ParseChunk:
-    sha1sum: str
     note_text: str
     line_number_start: int
     line_number_end: int
+
+    sha1sum: str = field(init=False)
     note_state: str = field(init=False)
     reacts: list[React] = field(init=False)
 
     def __post_init__(self) -> None:
+        self.note_text = self.note_text.strip()
         self.note_state = "normal"
 
         # The date separator entries don't contain any actual content, so we
         # blank them out so that they will get filtered out and won't be stored
         # in the database.
-        if is_yyyymmdd_date(self.note_text.strip()):
+        if is_yyyymmdd_date(self.note_text):
             self.note_text = ""
             self.sha1sum = sha1sum(self.note_text.strip())
             return
 
-        new_note_text = ""
-        self.reacts = []
-        for line in self.note_text.splitlines(keepends=True):
-            match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
-            if match:
-                try:
-                    react_date = datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date()
-                    react_text = match.group(2)
-                    react = React(react_date, react_text)
-                    self.reacts.append(react)
-                except ValueError:
-                    # Failed to parse date, so must not be a reaction after
-                    # all.
-                    new_note_text += line
-            else:
-                new_note_text += line
+        self.sha1sum, self.reacts = hash_and_reacts(self.note_text)
+
         if self.reacts:
             # Grab the most recent reaction
             self.note_state = sorted(self.reacts, key=lambda r: r.date)[-1].react
-        self.note_text = new_note_text
-        self.sha1sum = sha1sum(self.note_text.strip())
 
 
 if CONFIG_FILE_PATH.exists():
@@ -336,14 +322,13 @@ def parse_inbox(lines: TextIOWrapper) -> list[ParseChunk]:
             assert state == "2+ newline"
             if line and not re.match("===+$", line):
                 state = "text"
-                result.append(ParseChunk(sha1sum(note_text.strip()), note_text,
-                               line_number_start, line_number - 1))
+                result.append(ParseChunk(note_text, line_number_start,
+                                         line_number - 1))
                 line_number_start = line_number
                 note_text = line + "\n"
             # else: state remains the same
     # We ended the loop above without adding the final note, so add it now
-    result.append(ParseChunk(sha1sum(note_text.strip()), note_text,
-                   line_number_start, line_number))
+    result.append(ParseChunk(note_text, line_number_start, line_number))
     # Filter out blank notes
     result = [pc for pc in result if pc.note_text]
     return result
@@ -678,6 +663,26 @@ def human_friendly_time(days: float) -> str:
 
 def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
+
+def hash_and_reacts(note_text: str) -> tuple[str, list[React]]:
+    to_be_hashed = ""
+    reacts = []
+    for line in note_text.splitlines(keepends=True):
+        match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+        is_react = False
+        if match:
+            try:
+                react_date = datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date()
+                react_text = match.group(2)
+                react = React(react_date, react_text)
+                reacts.append(react)
+                is_react = True
+            except ValueError:
+                # Failed to parse date, so must not be a reaction after all.
+                pass
+        if not is_react:
+            to_be_hashed += line
+    return (sha1sum(to_be_hashed.strip()), reacts)
 
 
 if __name__ == "__main__":
