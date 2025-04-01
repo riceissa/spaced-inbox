@@ -295,19 +295,6 @@ def tag_with_filename(filepath: Path) -> Callable[[ParseChunk], tuple[Path, Pars
     return tag_it
 
 
-def reload_db(conn: Connection, log_level=1) -> list[Note]:
-    current_inbox: list[tuple[Path, ParseChunk]] = []
-    for path in INBOX_PATHS:
-        if log_level > 0:
-            print(f"Importing new notes from {path}... ", file=sys.stderr,
-                  end="")
-        with open(path, "r", encoding="utf-8") as f:
-            current_inbox.extend(map(tag_with_filename(path),
-                                     parse_inbox(f)))
-        if log_level > 0:
-            print("done.", file=sys.stderr)
-    updated = update_notes_db(conn, current_inbox, log_level)
-    return updated
 
 
 def clear_screen() -> None:
@@ -366,13 +353,23 @@ def _print_lines(string: str) -> None:
         line_number += 1
         print(line_number, line)
 
-
-def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> list[Note]:
+def reload_db(conn: Connection, log_level=1) -> list[Note]:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
     Return the new notes by combining the current inbox and what's already in the db.
     """
+    current_inbox: list[tuple[Path, ParseChunk]] = []
+    for path in INBOX_PATHS:
+        if log_level > 0:
+            print(f"Importing new notes from {path}... ", file=sys.stderr,
+                  end="")
+        with open(path, "r", encoding="utf-8") as f:
+            current_inbox.extend(map(tag_with_filename(path),
+                                     parse_inbox(f)))
+        if log_level > 0:
+            print("done.", file=sys.stderr)
+
     result: list[Note] = []
     if log_level > 0:
         print("Updating the database with the contents of the new inbox files... ", end="", file=sys.stderr)
