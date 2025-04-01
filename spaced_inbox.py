@@ -216,7 +216,7 @@ def note_from_db_row(row) -> Note:
 def get_notes_from_db(conn: Connection) -> list[Note]:
     cursor = conn.cursor()
     columns = ", ".join(DB_COLUMNS)
-    query = f"select {columns} from notes"
+    query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath, substr(note_text, 1, 20) as note_text from notes"
     rows = cursor.execute(query).fetchall()
     result = [note_from_db_row(row) for row in rows]
     return result
@@ -279,7 +279,6 @@ def tag_with_filename(filepath: Path) -> Callable[[ParseChunk], tuple[Path, Pars
 
 
 def reload_db(conn: Connection, log_level=1) -> list[Note]:
-    notes_from_db = get_notes_from_db(conn)
     current_inbox: list[tuple[Path, ParseChunk]] = []
     for path in INBOX_PATHS:
         if log_level > 0:
@@ -290,7 +289,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                      parse_inbox(f)))
         if log_level > 0:
             print("done.", file=sys.stderr)
-    update_notes_db(conn, notes_from_db, current_inbox, log_level)
+    update_notes_db(conn, current_inbox, log_level)
 
     # After we update the db using the current inbox, we must query the db
     # again since the due dates for some of the notes may have changed (e.g.
@@ -358,7 +357,7 @@ def _print_lines(string: str) -> None:
         print(line_number, line)
 
 
-def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
+def update_notes_db(conn: Connection, current_inbox: list[tuple[Path, ParseChunk]], log_level=1) -> None:
     """
     Add new notes to db.
     Remove notes from db if they no longer exist in the notes file?
@@ -370,6 +369,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     # the note_text itself, which is most of the bytes of a note, so i'm
     # wondering if things can be sped up if i exclude note_text from the query
     # that generated notes_from_db.
+    notes_from_db = get_notes_from_db(conn)
     db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
     unchanged_number = 0
