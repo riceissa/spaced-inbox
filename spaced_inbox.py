@@ -382,8 +382,8 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
     inbox_filepath: Path
     pc: ParseChunk
     for inbox_filepath, pc in current_inbox:
-        note_from_db: Note = db_hashes[pc.sha1sum]
-        if pc.sha1sum in db_hashes and note_from_db.interval >= 0:
+        if pc.sha1sum in db_hashes and db_hashes[pc.sha1sum].interval >= 0:
+            note_from_db: Note = db_hashes[pc.sha1sum]
             # The note content is not new, but the following things may have
             # changed:
             #     - the file in which the note appears
@@ -436,6 +436,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                          new_note.sha1sum,
             ))
         elif pc.sha1sum in db_hashes:
+            note_from_db = db_hashes[pc.sha1sum]
             # The note content is not new but the same note content was
             # previously added and then soft-deleted from the db, so we want to
             # reset the review schedule.
