@@ -134,12 +134,11 @@ Add the following to your `~/.emacs.d/init.el` file:
       (message "Was not able to navigate to %s line %d" filename line-number)
       nil)))
 
-(defun spaced-inbox ()
+(defun roll ()
   (interactive)
   (let ((spaced-inbox-command "spaced_inbox.py -r"))
     (message "Running spaced inbox script via: %s ..." spaced-inbox-command)
-    (let* ((raw-output (shell-command-to-string spaced-inbox-command))
-           (output (string-trim raw-output)))
+    (let ((output (string-trim (shell-command-to-string spaced-inbox-command))))
       (if (string-empty-p output)
           (message "Spaced inbox script produced no output.")
         (progn
@@ -159,7 +158,7 @@ other compiler from within Emacs. Think of the spaced inbox script as a
 compiler for your notes; instead of giving your a list of errors in your code,
 it shows you a list of notes that perhaps you should look back on.
 
-Restart Emacs. Now you should be able to just do `M-x spaced-inbox` to do a
+Restart Emacs. Now you should be able to just do `M-x roll` to do a
 single review. Of course, you can map this command to any key combination you
 want.
 
