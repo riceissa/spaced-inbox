@@ -307,13 +307,6 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
         if log_level > 0:
             print("done.", file=sys.stderr)
     updated = update_notes_db(conn, current_inbox, log_level)
-
-    # After we update the db using the current inbox, we must query the db
-    # again since the due dates for some of the notes may have changed (e.g.
-    # some notes may have been deleted). This fixes a bug where if a note is
-    # due, then I edit it and type 'quit' and then re-run the script, the note
-    # is still due.
-    # combined_notes_db = get_notes_from_db(conn)
     return updated
 
 
