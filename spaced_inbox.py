@@ -40,6 +40,11 @@ if not CONFIG_FILE_PATH.exists():
 # This value sets the initial interval in days.
 INITIAL_INTERVAL: int = 50
 
+# TODO: all the separate calls to .today() seem sketchy to me. if someone is
+# doing reviews right before midnight, it's possible that a weird inconsistent
+# state could be stored. possibly define it just once at the start of the
+# script, although idk if that's a good idea either.
+
 # TODO: one thing that smooth.sh did that the new-as-of-January-2023 version
 # doesn't do is having different quotas for the different inbox text files. If
 # I do a large import of a new "stream" like browser bookmarks or something,
@@ -98,6 +103,14 @@ class Note:
     reviewed_count: int
     note_state: str
     filepath: Path
+    # TODO: I'm not sure if note_text should contain the reacts part of the raw
+    # text or not. the sha1sum hash above definitely needs to exclude that
+    # part. so then it might be confusing that sha1sum != hash(note_text),
+    # rather it will be sha1sum == hash(reacts_removed(note_text)). The reason
+    # I'm thinking in this direction is because the ParseChunk does have info
+    # about reacts (since it was just parsed), but the db doesn't store
+    # anything about reacts, so we just have to partially recollect what the
+    # reacts were by using last_reviewed_on and note_state.
     note_text: str
 
     def __repr__(self) -> str:
