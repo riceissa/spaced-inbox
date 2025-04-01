@@ -342,7 +342,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     Remove notes from db if they no longer exist in the notes file?
     """
     if log_level > 0:
-        print("Updating the database with the contents of the new inbox files...", end="", file=sys.stderr)
+        print("Updating the database with the contents of the new inbox files... ", end="", file=sys.stderr)
     c = conn.cursor()
     # TODO(2025-04-01): we need a lot of the metadata for each note, but not
     # the note_text itself, which is most of the bytes of a note, so i'm
@@ -350,6 +350,9 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
     # that generated notes_from_db.
     db_hashes = {note.sha1sum: note for note in notes_from_db}
     note_number = 0
+    unchanged_number = 0
+    new_react_added_number = 0
+    resurrected_number = 0
     inbox_size = len(current_inbox)
 
     inbox_filepath: Path
@@ -369,11 +372,14 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
             new_last_reviewed_on = note_from_db.last_reviewed_on
             new_reviewed_count = note_from_db.reviewed_count
             new_note_state = note_from_db.note_state
-            if pc.reacts and pc.reacts[-1].date >= note_from_db.last_reviewed_on:
+            if pc.reacts and pc.reacts[-1].date > note_from_db.last_reviewed_on:
                 new_interval = good_interval(note_from_db.interval, note_from_db.ease_factor)
                 new_last_reviewed_on = pc.reacts[-1].date
                 new_reviewed_count += 1
                 new_note_state = pc.reacts[-1].text
+                new_react_added_number += 1
+            else:
+                unchanged_number += 1
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           filepath = ?,
@@ -417,6 +423,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
                                           str(inbox_filepath),
                                           pc.note_text,
                          pc.sha1sum))
+            resurrected_number += 1
         else:
             # The note content is new.
             note_number += 1
@@ -441,7 +448,10 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
                 sys.exit()
     conn.commit()
     if log_level > 0:
-        print(f"{note_number} new notes found... ", file=sys.stderr, end="")
+        print(f"{note_number} new notes found, ", file=sys.stderr, end="")
+        print(f"{new_react_added_number} pre-existing notes got a new react, ", file=sys.stderr, end="")
+        print(f"{resurrected_number} notes were resurrected, ", file=sys.stderr, end="")
+        print(f"{unchanged_number} notes were completely unchanged other than their location, ", file=sys.stderr, end="")
 
     # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(pc.sha1sum for _, pc in current_inbox)
