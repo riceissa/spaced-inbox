@@ -259,24 +259,24 @@ def main() -> None:
     else:
         conn = sqlite3.connect(DB_PATH)
 
-    if args.roll:
+    if args.roll or args.compile:
         notes_from_db = reload_db(conn, log_level=0)
-        note: Note | None = pick_note_to_review(notes_from_db, log_level=0)
-        if note:
-            inbox_file = note.filepath
-            line_number = note.line_number_start
-            column_number = 1
-            line_fragment = initial_fragment(note.note_text)
-            print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
-    if args.compile:
-        notes_from_db = reload_db(conn, log_level=0)
-        for note in sorted(due_notes(notes_from_db), key=lambda n: (n.filepath, n.line_number_start)):
-            inbox_file = note.filepath
-            line_number = note.line_number_start
-            column_number = 1
-            line_fragment = initial_fragment(note.note_text)
-            print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
-    if not (args.roll or args.compile):
+        if args.roll:
+            note: Note | None = pick_note_to_review(notes_from_db, log_level=0)
+            if note:
+                inbox_file = note.filepath
+                line_number = note.line_number_start
+                column_number = 1
+                line_fragment = initial_fragment(note.note_text)
+                print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
+        if args.compile:
+            for note in sorted(due_notes(notes_from_db), key=lambda n: (n.filepath, n.line_number_start)):
+                inbox_file = note.filepath
+                line_number = note.line_number_start
+                column_number = 1
+                line_fragment = initial_fragment(note.note_text)
+                print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
+    else:
         # The following (i.e. not passing in any flags, the default action) is
         # useful if you just want to import new notes as a cronjob or
         # something, and don't want to do a review.
