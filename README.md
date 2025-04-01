@@ -181,7 +181,7 @@ Then put the following in your vimrc:
 command! Roll call s:ExecuteRoll()
 function! s:ExecuteRoll()
   let l:mp = &makeprg
-  set makeprg=spaced_inbox.py\ -r
+  set makeprg=/path/to/spaced_inbox.py\ -r
   silent! make
   let &makeprg = l:mp
   silent! cfirst
