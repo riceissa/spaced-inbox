@@ -153,7 +153,25 @@ class ParseChunk:
             self.sha1sum = sha1sum(self.note_text.strip())
             return
 
-        self.sha1sum, self.reacts = hash_and_reacts(self.note_text)
+        to_be_hashed = ""
+        self.reacts = []
+        for line in self.note_text.splitlines(keepends=True):
+            match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+            is_react = False
+            if match:
+                try:
+                    self.reacts.append(React(
+                        datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date(),
+                        match.group(2)
+                    ))
+                    is_react = True
+                except ValueError:
+                    # Failed to parse date, so must not be a reaction after all.
+                    pass
+            if not is_react:
+                to_be_hashed += line
+        self.reacts.sort(key=lambda r: r.date)
+        self.sha1sum = sha1sum(to_be_hashed.strip())
 
 
 if CONFIG_FILE_PATH.exists():
@@ -451,7 +469,7 @@ def update_notes_db(conn: Connection, notes_from_db: list[Note], current_inbox: 
         print(f"{note_number} new notes found, ", file=sys.stderr, end="")
         print(f"{new_react_added_number} pre-existing notes got a new react, ", file=sys.stderr, end="")
         print(f"{resurrected_number} notes were resurrected, ", file=sys.stderr, end="")
-        print(f"{unchanged_number} notes were completely unchanged other than their location, ", file=sys.stderr, end="")
+        print(f"{unchanged_number} notes were completely unchanged other than potentially their location, ", file=sys.stderr, end="")
 
     # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(pc.sha1sum for _, pc in current_inbox)
@@ -704,27 +722,6 @@ def human_friendly_time(days: float) -> str:
 
 def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
-
-def hash_and_reacts(note_text: str) -> tuple[str, list[React]]:
-    to_be_hashed = ""
-    reacts = []
-    for line in note_text.splitlines(keepends=True):
-        match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
-        is_react = False
-        if match:
-            try:
-                react_date = datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date()
-                react_text = match.group(2)
-                react = React(react_date, react_text)
-                reacts.append(react)
-                is_react = True
-            except ValueError:
-                # Failed to parse date, so must not be a reaction after all.
-                pass
-        if not is_react:
-            to_be_hashed += line
-    reacts.sort(key=lambda r: r.date)
-    return (sha1sum(to_be_hashed.strip()), reacts)
 
 
 if __name__ == "__main__":
