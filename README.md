@@ -185,19 +185,7 @@ want.
 
 ## Using the script from within Vim
 
-First, make sure that the spaced inbox directory is in your path. Add something
-like the following to your `~/.bashrc`:
-
-```bash
-# The following location depends on where you cloned the git repo to
-export PATH="$HOME/projects/spaced-inbox:$PATH"
-```
-
-Alternatively, if you don't want to mess with your `PATH`, you can just modify
-the `set makeprg=...` line below to include the full path to the
-`spaced_inbox.py` script.
-
-Then put the following in your vimrc:
+Put the following in your vimrc:
 
 ```vim
 command! Roll call s:ExecuteRoll()
