@@ -51,6 +51,28 @@ with an initial interval of 50 days, so it goes 50 days, 50\*2.5 = 125 days,
 logic to pick ones that should feel the most exciting to you, rather than
 randomly picking among them or just showing you the card that is most overdue.
 
+## Quick start
+
+```bash
+git clone https://github.com/riceissa/spaced-inbox.git
+cd spaced-inbox
+mkdir -p ~/.config/spaced-inbox/
+cp config.txt-example ~/.config/spaced-inbox/config.txt
+$EDITOR ~/.config/spaced-inbox/config.txt  # Follow directions in the file
+./spaced_inbox.py --help
+./spaced_inbox.py
+./spaced_inbox.py -r
+./spaced_inbox.py -c
+```
+
+The recommended way to use the script is from inside of a text editor using the
+`-r` flag. Many editors support parsing the output of the `-r` flag, allowing
+you to jump to the note that is due for review. I've added short guides for
+[Emacs](#using-the-script-from-within-emacs) and
+[Vim](#using-the-script-from-within-vim), so you have an idea of how it works.
+I plan to eventually create a GUI program so that you don't need to set
+everything up.
+
 ## Warning
 
 The spaced inbox program in this repo is a _research project_ designed
@@ -117,7 +139,7 @@ See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/b
 
 ## Using the script from within Emacs
 
-Add the following to your `~/.emacs.d/init.el` file:
+Add the following to your `~/.emacs.d/init.el` or `~/.emacs` file:
 
 ```elisp
 (defun spaced-inbox--navigate-from-string (input-string)
