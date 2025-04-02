@@ -121,22 +121,6 @@ There are two senses in which one might "use Anki":
 (Thanks to TheCedarPrince for prompting me with the questions that led to these
 thoughts.)
 
-## Setting up on Windows
-
-I'm using gitbash as my terminal, with the graphical Emacs to edit files. I'm sure other setups are also possible but I haven't gotten around to trying them out.
-
-If you wish to run convenience scripts like `do.sh`, you will need to download sqlite3.exe from [this page](https://www.sqlite.org/download.html) (it's in sqlite-tools-win32-x86-3350400.zip) and put the executable in your PATH so that gitbash can find it (e.g. place it in `C:/Users/YOURNAME/bin`).
-
-## some helpful sql commands to poke around in the db
-
-To find the notes that will be due first:
-
-```sql
-select interval_anchor, interval, date(interval_anchor, '+' || interval || ' day') as due_on from notes where due_on not null order by due_on asc limit 5;
-```
-
-See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/blob/master/review_load.py).
-
 ## Using the script from within Emacs
 
 Add the following to your `~/.emacs.d/init.el` or `~/.emacs` file:
@@ -201,6 +185,16 @@ endfunction
 
 Now you can just call `:Roll` to do a review. This works from any file. You can
 remap `:Roll` to any keybinding to make it easier to do reviews.
+
+## some helpful sql commands to poke around in the db
+
+To find the notes that will be due first:
+
+```sql
+select last_reviewed_on, interval, date(last_reviewed_on, '+' || interval || ' day') as due_on from notes where due_on not null order by due_on desc;
+```
+
+See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/blob/master/review_load.py).
 
 ## TODO
 
