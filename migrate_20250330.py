@@ -11,6 +11,7 @@ sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
 DB_PATH: Path = Path("~/.local/share/spaced-inbox/data.db").expanduser()
 backup_path = DB_PATH.parent / 'data-migrate_20250330_backup.db'
+# Make backup of old db
 DB_PATH.rename(backup_path)
 
 conn_old = sqlite3.connect(str(backup_path))
