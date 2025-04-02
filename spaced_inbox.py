@@ -657,67 +657,20 @@ def record_review_load(num_notes: int, num_due_notes: int) -> None:
         review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
 
 def interact_loop(conn: Connection) -> None:
-    no_review = False
-    external_program = ""
-    while True:
+    command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]eroll', '[q]uit'): ")
+    if not re.match(r"e|i|m|c|t|y|l|r|q", command):
+        print("Not a valid command", file=sys.stderr)
 
-        note: Note | None = None
-        if note is None:
-            print("No notes are due")
-            break
-        else:
-            print(note)
-            if external_program == "emacs":
-                loc = note.line_number_start
-                elisp = ("""
-                    (with-current-buffer
-                        (window-buffer (selected-window))
-                      (find-file "%s")
-                      (goto-line %s)
-                      (recenter-top-bottom 0))
-                """ % (
-                    # since the db only stores the inbox name, we must look up
-                    # the filepath from INBOX_FILES
-                    "FIXME", # INBOX_FILE.replace("\\", r"\\\\"),
-                    loc
-                )).replace("\n", " ").strip()
-                emacsclient = "emacsclient"
-                if os.name == "nt":
-                    # Python on Windows is dumb and can't detect gitbash
-                    # aliases so we have to get the full path of the executable
-                    emacsclient = "C:/Program Files/Emacs/emacs-29.4/bin/emacsclientw"
-                p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
-
-
-        command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]eroll', '[q]uit'): ")
-        if not re.match(r"e|i|m|c|t|y|l|r|q", command):
-            print("Not a valid command", file=sys.stderr)
-            continue
-        if command.strip() in ["r", "refresh", "reroll"]:
-            continue
-        if command.strip() in ["q", "quit"]:
-            break
-
-        command_to_state = {
-                'e': "exciting",
-                'i': "interesting",
-                'm': "meh",
-                'c': "cringe",
-                't': "taxing",
-                'y': "yeah",
-                'l': "lol",
-                }
-        c = conn.cursor()
-        new_interval = good_interval(note.interval, note.ease_factor)
-        c.execute("""update notes set interval = ?,
-                                      last_reviewed_on = ?,
-                                      reviewed_count = ?,
-                                      note_state = ?
-                     where sha1sum = ?""",
-                  (new_interval, datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
-        conn.commit()
-        print("You will next see this note in " +
-              human_friendly_time(new_interval), file=sys.stderr)
+    new_interval = good_interval(note.interval, note.ease_factor)
+    c.execute("""update notes set interval = ?,
+                                  last_reviewed_on = ?,
+                                  reviewed_count = ?,
+                                  note_state = ?
+                 where sha1sum = ?""",
+              (new_interval, datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
+    conn.commit()
+    print("You will next see this note in " +
+          human_friendly_time(new_interval), file=sys.stderr)
 
 
 def sha1sum(string: str) -> str:
