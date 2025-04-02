@@ -69,7 +69,7 @@ The recommended way to use the script is from inside of a text editor using the
 `-r` flag. Many editors support parsing the output of the `-r` flag, allowing
 you to jump to the note that is due for review. I've added short guides for
 [Emacs](#using-the-script-from-within-emacs) and
-[Vim](#using-the-script-from-within-vim), so you have an idea of how it works.
+[Vim](#using-the-script-from-within-vim) so that you have an idea of how it works.
 I plan to eventually create a GUI program so that you don't need to set
 everything up.
 
