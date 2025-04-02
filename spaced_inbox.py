@@ -156,7 +156,7 @@ class ParseChunk:
         to_be_hashed = ""
         self.reacts = []
         for line in self.note_text.splitlines(keepends=True):
-            match = re.match(r'(\d\d\d\d-\d\d-\d\d): #(exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+            match = re.match(r'(\d\d\d\d-\d\d-\d\d): (exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
             is_react = False
             if match:
                 try:
@@ -660,17 +660,6 @@ def interact_loop(conn: Connection) -> None:
     command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]eroll', '[q]uit'): ")
     if not re.match(r"e|i|m|c|t|y|l|r|q", command):
         print("Not a valid command", file=sys.stderr)
-
-    new_interval = good_interval(note.interval, note.ease_factor)
-    c.execute("""update notes set interval = ?,
-                                  last_reviewed_on = ?,
-                                  reviewed_count = ?,
-                                  note_state = ?
-                 where sha1sum = ?""",
-              (new_interval, datetime.date.today().strftime("%Y-%m-%d"), note.reviewed_count + 1, command_to_state[command.strip()], note.sha1sum))
-    conn.commit()
-    print("You will next see this note in " +
-          human_friendly_time(new_interval), file=sys.stderr)
 
 
 def sha1sum(string: str) -> str:
