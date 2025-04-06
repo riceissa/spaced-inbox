@@ -212,21 +212,7 @@ if not INBOX_PATHS:
     sys.exit()
 
 def note_from_db_row(row, has_note_text=True) -> Note:
-    if has_note_text:
-        return Note(
-            sha1sum=row[0],
-            line_number_start=row[1],
-            line_number_end=row[2],
-            ease_factor=row[3],
-            interval=row[4],
-            last_reviewed_on=yyyymmdd_to_date(row[5]),
-            created_on=yyyymmdd_to_date(row[6]),
-            reviewed_count=row[7],
-            note_state=row[8],
-            filepath=row[9],
-            note_text=row[10],
-        )
-    return Note(
+    note = Note(
         sha1sum=row[0],
         line_number_start=row[1],
         line_number_end=row[2],
@@ -239,14 +225,17 @@ def note_from_db_row(row, has_note_text=True) -> Note:
         filepath=row[9],
         note_text="",
     )
+    if has_note_text:
+        note.note_text = row[10]
+    return note
 
 
 def get_notes_from_db(conn: Connection, fetch_note_text=True) -> list[Note]:
     cursor = conn.cursor()
+    note_text_part = ""
     if fetch_note_text:
-        query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath, note_text from notes"
-    else:
-        query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath from notes"
+        note_text_part = ", note_text"
+    query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath {note_text_part} from notes"
     rows = cursor.execute(query).fetchall()
     result = [note_from_db_row(row, has_note_text=fetch_note_text) for row in rows]
     return result
@@ -303,12 +292,6 @@ def tag_with_filename(filepath: Path) -> Callable[[ParseChunk], tuple[Path, Pars
     def tag_it(pc: ParseChunk) -> tuple[Path, ParseChunk]:
         return (filepath, pc)
     return tag_it
-
-
-
-
-def clear_screen() -> None:
-    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def parse_inbox(lines: TextIOWrapper) -> list[ParseChunk]:
