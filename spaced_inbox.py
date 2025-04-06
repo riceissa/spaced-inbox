@@ -522,8 +522,7 @@ def due_notes(notes_from_db: list[Note]) -> list[Note]:
         if note.interval < 0:
             # This note was soft-deleted, so don't include in reviews
             continue
-        due_date = (note.last_reviewed_on +
-                    datetime.timedelta(days=note.interval))
+        due_date = note.last_reviewed_on + datetime.timedelta(days=note.interval)
         if TODAY >= due_date:
             result.append(note)
     return result
@@ -546,7 +545,7 @@ def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
         # been reviewed. So it WILL become a bug soon.
         days_since_created = (TODAY - note.created_on).days
         if (note.interval > 0 and note.note_state == "normal" and
-            days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
+            INITIAL_INTERVAL <= days_since_created <= 2*INITIAL_INTERVAL):
             candidates.append(note)
     if not candidates:
         return None
@@ -557,8 +556,8 @@ def get_exciting_note(notes_from_db: list[Note]) -> Note | None:
     weights = []
     for note in notes_from_db:
         days_since_reviewed = (TODAY - note.last_reviewed_on).days
-        days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
-        if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
+        days_overdue = days_since_reviewed - note.interval
+        if note.interval > 0 and note.note_state == "exciting" and days_overdue >= 0:
             candidates.append(note)
             # We allow any exciting and overdue note to be selected, but weight
             # the probabilities so that the ones that are more overdue are more
@@ -586,8 +585,8 @@ def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
         # i should just use the stored interval, and "exciting" and other
         # reacts should change the interval as it's being stored, rather than
         # potentially doing stuff as it's being pulled out of the db.
-        days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
-        if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue > 0:
+        days_overdue = days_since_reviewed - note.interval
+        if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue >= 0:
             candidates.append(note)
             # TODO: I need to learn more about what sensible weights for this
             # are.  For example, maybe if a note has a longer interval then
@@ -647,8 +646,8 @@ def calc_stats(notes: list[Note]) -> tuple[int, int]:
         if note.interval > 0:
             num_notes += 1
             days_since_reviewed = (TODAY - note.last_reviewed_on).days
-            days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
-            if days_overdue > 0:
+            days_overdue = days_since_reviewed - note.interval
+            if note.interval > 0 and days_overdue >= 0:
                 num_due_notes += 1
     return (num_notes, num_due_notes)
 

@@ -5,7 +5,7 @@ create table notes (
         sha1sum text unique not null,
         line_number_start integer,
         line_number_end integer,
-        ease_factor integer,  /* as a percentage, defaults to 250% like in Anki */
+        ease_factor integer,  /* as a percentage, defaults to 300% unlike Anki's 250% */
         interval integer,  /* in days; -1 means the note has been soft-deleted */
         last_reviewed_on date,
         created_on date,
