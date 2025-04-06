@@ -39,6 +39,8 @@ if not CONFIG_FILE_PATH.exists():
 
 # This value sets the initial interval in days.
 INITIAL_INTERVAL: int = 50
+# Default ease factor in percent, i.e. 300 means 300%.
+DEFAULT_EASE_FACTOR: int = 300
 
 # Call datetime.date.today() once so that even if someone is doing reviews
 # right before midnight, there won't be a weird inconsistent state could be
@@ -439,7 +441,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
             new_note = Note(pc.sha1sum,
                             pc.line_number_start,
                             pc.line_number_end,
-                            300,
+                            DEFAULT_EASE_FACTOR,
                             INITIAL_INTERVAL,
                             TODAY,
                             note_from_db.created_on,
@@ -474,17 +476,16 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
             note_number += 1
             try:
                 new_note = Note(sha1sum=pc.sha1sum,
-                               line_number_start=pc.line_number_start,
-                               line_number_end=pc.line_number_end,
-                               ease_factor=300,
-                               interval=INITIAL_INTERVAL,
-                               last_reviewed_on=TODAY,
-                               created_on=TODAY,
-                               reviewed_count=0,
-                               note_state="normal",
-                               filepath=inbox_filepath,
-                               note_text=pc.note_text,
-                            )
+                                line_number_start=pc.line_number_start,
+                                line_number_end=pc.line_number_end,
+                                ease_factor=DEFAULT_EASE_FACTOR,
+                                interval=INITIAL_INTERVAL,
+                                last_reviewed_on=TODAY,
+                                created_on=TODAY,
+                                reviewed_count=0,
+                                note_state="normal",
+                                filepath=inbox_filepath,
+                                note_text=pc.note_text)
                 c.execute("insert into notes (%s) values (%s)"
                           % (", ".join(DB_COLUMNS),
                              ", ".join(["?"]*len(DB_COLUMNS))),
@@ -579,6 +580,12 @@ def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
     weights = []
     for note in notes_from_db:
         days_since_reviewed = (TODAY - note.last_reviewed_on).days
+        # TODO: so why did i recalculate the current interval here? maybe this
+        # was back when i had that weird anchor date thing. i am confused why
+        # i'm both storing the interval and also recalculating it here. i think
+        # i should just use the stored interval, and "exciting" and other
+        # reacts should change the interval as it's being stored, rather than
+        # potentially doing stuff as it's being pulled out of the db.
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue > 0:
             candidates.append(note)
