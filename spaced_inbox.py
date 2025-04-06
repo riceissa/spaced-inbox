@@ -40,10 +40,10 @@ if not CONFIG_FILE_PATH.exists():
 # This value sets the initial interval in days.
 INITIAL_INTERVAL: int = 50
 
-# TODO: all the separate calls to .today() seem sketchy to me. if someone is
-# doing reviews right before midnight, it's possible that a weird inconsistent
-# state could be stored. possibly define it just once at the start of the
-# script, although idk if that's a good idea either.
+# Call datetime.date.today() once so that even if someone is doing reviews
+# right before midnight, there won't be a weird inconsistent state could be
+# stored.
+TODAY: datetime.date = datetime.date.today()
 
 # TODO: one thing that smooth.sh did that the new-as-of-January-2023 version
 # doesn't do is having different quotas for the different inbox text files. If
@@ -58,11 +58,22 @@ INITIAL_INTERVAL: int = 50
 # "github projects ideas repo notes should get a bit of penalty because they
 # tend to be boring".  A bit thing to keep in mind that some inbox files
 # can contain WAY more notes than some others.
+# 2025-04-06: i think the new reacts system will take care of this, but i
+# should think more about it. also, under the new system, the script doesn't
+# care what file the note is stored in -- it's all as if it's in one big file
+# to the script. however, it would be possible to add new directives like
+# #prioritize or whatever, or even maybe just the reacts sytem, like
+# "2025-04-06: bookmark" or something to communicate with the script. i think
+# doing this all "in-bound" within the inbox file makes things messier to the
+# user, but also more legible so i kind of like it for now.
 
 # TODO: i am realizing that i often purposely don't fix some typos on boring
 # notes because i reason that if i *do* fix them then that will reset the
 # review schedule to 50 days, which i don't want. maybe there should be some
 # way to make trivial changes without affecting the review schedule.
+# 2025-04-06: this seems hard to do well, e.g. what if there's two notes that
+# are very similar. so i'm just gonna keep thinking about it but not do
+# anything for now.
 
 DB_COLUMNS: list[str] = ['sha1sum', 'line_number_start', 'line_number_end',
                          'ease_factor', 'interval', 'last_reviewed_on',
@@ -103,14 +114,16 @@ class Note:
     reviewed_count: int
     note_state: str
     filepath: Path
-    # TODO: I'm not sure if note_text should contain the reacts part of the raw
-    # text or not. the sha1sum hash above definitely needs to exclude that
-    # part. so then it might be confusing that sha1sum != hash(note_text),
-    # rather it will be sha1sum == hash(reacts_removed(note_text)). The reason
-    # I'm thinking in this direction is because the ParseChunk does have info
-    # about reacts (since it was just parsed), but the db doesn't store
-    # anything about reacts, so we just have to partially recollect what the
-    # reacts were by using last_reviewed_on and note_state.
+    # note_text contains the reacts part of the raw text. But the sha1sum hash
+    # above excludes reacts. So it might be confusing that sha1sum !=
+    # hash(note_text), rather the actual relationship is sha1sum ==
+    # hash(reacts_removed(note_text)). The reason I did it this way is because
+    # the ParseChunk does have info about reacts (since it was just parsed),
+    # but the db doesn't store anything about reacts (and explicitly storing it
+    # would make the db more complicated to manage, e.g. I would need to add a
+    # new table probably and start doing join queries), and I didn't want to
+    # only have partial recollection of what the reacts were by using
+    # last_reviewed_on and note_state.
     note_text: str
 
     def __repr__(self) -> str:
@@ -156,7 +169,7 @@ class ParseChunk:
         to_be_hashed = ""
         self.reacts = []
         for line in self.note_text.splitlines(keepends=True):
-            match = re.match(r'(\d\d\d\d-\d\d-\d\d): (exciting|interesting|meh|cringe|taxing|yeah|lol)$', line.strip())
+            match = re.match(r'(\d\d\d\d-\d\d-\d\d): ([A-Za-z_][A-Za-z0-9_]*)$', line.strip())
             is_react = False
             if match:
                 try:
@@ -445,7 +458,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                             pc.line_number_end,
                             300,
                             INITIAL_INTERVAL,
-                            datetime.date.today(),
+                            TODAY,
                             note_from_db.created_on,
                             0,
                             "normal",
@@ -482,8 +495,8 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
                                line_number_end=pc.line_number_end,
                                ease_factor=300,
                                interval=INITIAL_INTERVAL,
-                               last_reviewed_on=datetime.date.today(),
-                               created_on=datetime.date.today(),
+                               last_reviewed_on=TODAY,
+                               created_on=TODAY,
                                reviewed_count=0,
                                note_state="normal",
                                filepath=inbox_filepath,
@@ -527,7 +540,7 @@ def due_notes(notes_from_db: list[Note]) -> list[Note]:
             continue
         due_date = (note.last_reviewed_on +
                     datetime.timedelta(days=note.interval))
-        if datetime.date.today() >= due_date:
+        if TODAY >= due_date:
             result.append(note)
     return result
 
@@ -547,7 +560,7 @@ def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
         # store the responses "in bound" inside the inbox.txt file itself,
         # which means notes CAN have a "normal" state now even though they've
         # been reviewed. So it WILL become a bug soon.
-        days_since_created = (datetime.date.today() - note.created_on).days
+        days_since_created = (TODAY - note.created_on).days
         if (note.interval > 0 and note.note_state == "normal" and
             days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
             candidates.append(note)
@@ -559,7 +572,7 @@ def get_exciting_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_from_db:
-        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        days_since_reviewed = (TODAY - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
             candidates.append(note)
@@ -575,14 +588,14 @@ def get_exciting_note(notes_from_db: list[Note]) -> Note | None:
     return random.choices(candidates, weights, k=1)[0]
 
 # TODO: I only deal with "normal" and "exciting" notes specially. But
-# there's support for more reactions to notes during review. Eventually, I'd
-# like to incorporate these other reactions into the review algo as well.
+# there's support for arbitrary reactions during review. Eventually, I'd
+# like to incorporate more reactions into the review algo as well.
 
 def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_from_db:
-        days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+        days_since_reviewed = (TODAY - note.last_reviewed_on).days
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue > 0:
             candidates.append(note)
@@ -643,7 +656,7 @@ def calc_stats(notes: list[Note]) -> tuple[int, int]:
     for note in notes:
         if note.interval > 0:
             num_notes += 1
-            days_since_reviewed = (datetime.date.today() - note.last_reviewed_on).days
+            days_since_reviewed = (TODAY - note.last_reviewed_on).days
             days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
             if days_overdue > 0:
                 num_due_notes += 1
@@ -655,11 +668,6 @@ def record_review_load(num_notes: int, num_due_notes: int) -> None:
             review_load_file.write("timestamp,num_notes,num_due_notes\n")
     with open(REVIEW_LOAD_PATH, "a", encoding="utf-8") as review_load_file:
         review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
-
-def interact_loop(conn: Connection) -> None:
-    command = input("Enter a command ('[e]xciting', '[i]nteresting', '[m]eh', '[c]ringe', '[t]axing', '[y]eah', '[l]ol', '[r]eroll', '[q]uit'): ")
-    if not re.match(r"e|i|m|c|t|y|l|r|q", command):
-        print("Not a valid command", file=sys.stderr)
 
 
 def sha1sum(string: str) -> str:
