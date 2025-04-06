@@ -517,15 +517,18 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
 
 
 def due_notes(notes_from_db: list[Note]) -> list[Note]:
-    result = []
-    for note in notes_from_db:
-        if note.interval < 0:
-            # This note was soft-deleted, so don't include in reviews
-            continue
-        due_date = note.last_reviewed_on + datetime.timedelta(days=note.interval)
-        if TODAY >= due_date:
-            result.append(note)
-    return result
+    return [note for note in notes_from_db if note_is_due(note)]
+
+def note_is_due(note: Note) -> bool:
+    return num_days_note_is_overdue(note) >= 0
+
+def num_days_note_is_overdue(note: Note) -> int:
+    if note.interval < 0:
+        # This note was soft-deleted, so it should not be considered due; we
+        # just pass along the negative interval
+        return note.interval
+    days_since_reviewed = (TODAY - note.last_reviewed_on).days
+    return days_since_reviewed - note.interval
 
 def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
     """Randomly select a note that was created in the last 50-100 days and has
@@ -555,16 +558,14 @@ def get_exciting_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_from_db:
-        days_since_reviewed = (TODAY - note.last_reviewed_on).days
-        days_overdue = days_since_reviewed - note.interval
-        if note.interval > 0 and note.note_state == "exciting" and days_overdue >= 0:
+        if note_is_due(note) and note.note_state == "exciting":
             candidates.append(note)
             # We allow any exciting and overdue note to be selected, but weight
             # the probabilities so that the ones that are more overdue are more
             # likely to be selected.
             # TODO: I need to learn more about what sensible weights for this
             # are.
-            weights.append(days_overdue**2)
+            weights.append(num_days_note_is_overdue(note)**2)
 
     if not candidates:
         return None
@@ -579,21 +580,14 @@ def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
     weights = []
     for note in notes_from_db:
         days_since_reviewed = (TODAY - note.last_reviewed_on).days
-        # TODO: so why did i recalculate the current interval here? maybe this
-        # was back when i had that weird anchor date thing. i am confused why
-        # i'm both storing the interval and also recalculating it here. i think
-        # i should just use the stored interval, and "exciting" and other
-        # reacts should change the interval as it's being stored, rather than
-        # potentially doing stuff as it's being pulled out of the db.
-        days_overdue = days_since_reviewed - note.interval
-        if note.interval > 0 and note.note_state not in ["exciting"] and days_overdue >= 0:
+        if note_is_due(note) and note.note_state not in ["exciting"]:
             candidates.append(note)
             # TODO: I need to learn more about what sensible weights for this
             # are.  For example, maybe if a note has a longer interval then
             # it can be further delayed because it's already been so long
             # since you last saw the note.  So the weight should possibly
             # containt some percentage of the interval.
-            weights.append(days_overdue**2)
+            weights.append(num_days_note_is_overdue(note)**2)
     if not candidates:
         return None
     return random.choices(candidates, weights, k=1)[0]
@@ -645,9 +639,7 @@ def calc_stats(notes: list[Note]) -> tuple[int, int]:
     for note in notes:
         if note.interval > 0:
             num_notes += 1
-            days_since_reviewed = (TODAY - note.last_reviewed_on).days
-            days_overdue = days_since_reviewed - note.interval
-            if note.interval > 0 and days_overdue >= 0:
+            if note.interval > 0 and note_is_due(note):
                 num_due_notes += 1
     return (num_notes, num_due_notes)
 
