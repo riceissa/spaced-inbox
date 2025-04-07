@@ -535,20 +535,11 @@ def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
     not yet been reviewed yet."""
     candidates = []
     for note in notes_from_db:
-        # FIXME: I suspect using days_since_created here actually causes a
-        # problem, where even if a note has been reviewed, it will still keep
-        # showing up in reviews. So I need to add a check for when the note was
-        # last reviewed as well, I think.
-        # 2025-03-30: Actually, I was mistaken in there being a bug here. The
-        # only time a note has the "normal" state is when it has just been
-        # created. So as soon as the note gets reviewed, it will no longer have
-        # that state, so it will never be picked here. HOWEVER, I'm planning to
-        # store the responses "in bound" inside the inbox.txt file itself,
-        # which means notes CAN have a "normal" state now even though they've
-        # been reviewed. So it WILL become a bug soon.
         days_since_created = (TODAY - note.created_on).days
         if (note.interval > 0 and note.note_state == "normal" and
-            INITIAL_INTERVAL <= days_since_created <= 2*INITIAL_INTERVAL):
+                INITIAL_INTERVAL <= days_since_created <= 2*INITIAL_INTERVAL and
+                note.reviewed_count == 0):
+            assert note_is_due(note), note
             candidates.append(note)
     if not candidates:
         return None
