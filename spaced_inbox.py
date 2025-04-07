@@ -5,16 +5,12 @@ import shutil
 import textwrap
 import datetime
 import re
-import os
-import os.path
 import sys
 import random
 import sqlite3
 from sqlite3 import Connection, Cursor
 from io import TextIOWrapper
 import hashlib
-import subprocess
-from collections import namedtuple
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -232,17 +228,6 @@ def note_from_db_row(row, has_note_text=True) -> Note:
     return note
 
 
-def get_notes_from_db(conn: Connection, fetch_note_text=True) -> list[Note]:
-    cursor = conn.cursor()
-    note_text_part = ""
-    if fetch_note_text:
-        note_text_part = ", note_text"
-    query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath {note_text_part} from notes"
-    rows = cursor.execute(query).fetchall()
-    result = [note_from_db_row(row, has_note_text=fetch_note_text) for row in rows]
-    return result
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     format_help = "The printed format is <filename>:<line number>:<column number>:<starting fragment of the note>. This format is intended to be used by text editors such as Vim and Emacs."
@@ -375,7 +360,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
     unchanged_number = 0
     new_react_added_number = 0
     resurrected_number = 0
-    inbox_size = len(current_inbox)
+    # inbox_size = len(current_inbox)
 
     inbox_filepath: Path
     pc: ParseChunk
@@ -537,7 +522,7 @@ def get_recent_unreviewed_note(notes_from_db: list[Note]) -> Note | None:
     for note in notes_from_db:
         days_since_created = (TODAY - note.created_on).days
         if (note.interval > 0 and note.note_state == "normal" and
-                INITIAL_INTERVAL <= days_since_created <= 2*INITIAL_INTERVAL and
+                INITIAL_INTERVAL <= days_since_created <= 2 * INITIAL_INTERVAL and
                 note.reviewed_count == 0):
             assert note_is_due(note), note
             candidates.append(note)
@@ -570,7 +555,6 @@ def get_all_other_note(notes_from_db: list[Note]) -> Note | None:
     candidates = []
     weights = []
     for note in notes_from_db:
-        days_since_reviewed = (TODAY - note.last_reviewed_on).days
         if note_is_due(note) and note.note_state not in ["exciting"]:
             candidates.append(note)
             # TODO: I need to learn more about what sensible weights for this
@@ -677,6 +661,17 @@ def human_friendly_time(days: float) -> str:
 
 def yyyymmdd_to_date(string: str) -> datetime.date:
     return datetime.datetime.strptime(string, "%Y-%m-%d").date()
+
+
+def get_notes_from_db(conn: Connection, fetch_note_text=True) -> list[Note]:
+    cursor = conn.cursor()
+    note_text_part = ""
+    if fetch_note_text:
+        note_text_part = ", note_text"
+    query = f"select sha1sum, line_number_start, line_number_end, ease_factor, interval, last_reviewed_on, created_on, reviewed_count, note_state, filepath {note_text_part} from notes"
+    rows = cursor.execute(query).fetchall()
+    result = [note_from_db_row(row, has_note_text=fetch_note_text) for row in rows]
+    return result
 
 
 if __name__ == "__main__":
