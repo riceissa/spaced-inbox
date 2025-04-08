@@ -250,6 +250,8 @@ def main() -> None:
 
     if args.roll or args.compile:
         notes_from_db = reload_db(conn, log_level=0)
+        num_notes, num_due_notes = calc_stats(notes_from_db)
+        record_review_load(num_notes, num_due_notes)
         if args.roll:
             note: Note | None = pick_note_to_review(notes_from_db, log_level=0)
             if note:
