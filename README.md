@@ -210,11 +210,11 @@ See also the [review load visualizer](https://github.com/riceissa/spaced-inbox/b
     the line for the last note that is printed on the command line, so you no
     longer need to manually type in line numbers with `M-g g`. (This has now been removed; see below.)
 
-   UPDATE(2025-04-08): i ended up going back to the original idea i had here, which is to exploit
-   vim/emacs's builtin compilation processes. my solution to the interactivity problem described
-   above is to just allow the reactions (good, again, etc) "in-bound", i.e. in the inbox text file
-   itself. this lets you actually see your own past reactions as you're reviewing, which i think is
-   probably a good thing.
+    UPDATE(2025-04-08): i ended up going back to the original idea i had here, which is to exploit
+    vim/emacs's builtin compilation processes. my solution to the interactivity problem described
+    above is to just allow the reactions (good, again, etc) "in-bound", i.e. in the inbox text file
+    itself. this lets you actually see your own past reactions as you're reviewing, which i think is
+    probably a good thing.
 
 - notes identity is very crude right now: we just check the sha1 hash, so any modification to a note will turn it into a note with different identity, which means the review schedule will reset. I think there's a decent chance this is actually ok: the notes you modify are the notes you are actually engaging with, so you actually want them around more frequently. (Unfortunately, I don't think I will find out if it's fine [anytime soon](https://wiki.issarice.com/wiki/Iteration_cadence_for_spaced_repetition_experiments).)
 
