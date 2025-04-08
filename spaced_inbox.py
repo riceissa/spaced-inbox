@@ -382,7 +382,7 @@ def reload_db(conn: Connection, log_level=1) -> list[Note]:
             new_reviewed_count = note_from_db.reviewed_count
             new_note_state = note_from_db.note_state
             if pc.reacts and pc.reacts[-1].date > note_from_db.last_reviewed_on:
-                new_interval = good_interval(note_from_db.interval, note_from_db.ease_factor)
+                new_interval = good_interval(note_from_db.interval, note_from_db.ease_factor, pc.reacts[-1].text)
                 new_last_reviewed_on = pc.reacts[-1].date
                 new_reviewed_count += 1
                 new_note_state = pc.reacts[-1].text
@@ -637,7 +637,11 @@ def initial_fragment(string: str, words: int = 20) -> str:
     return " ".join(string.split()[:words])
 
 
-def good_interval(interval: int, ease_factor: int) -> int:
+def good_interval(interval: int, ease_factor: int, react_text: str) -> int:
+    if react_text == "exciting":
+        return int(interval * (ease_factor * 0.83)/100)
+    if react_text == "taxing":
+        return int(interval * (ease_factor * 1.5)/100)
     return int(interval * ease_factor/100)
 
 
