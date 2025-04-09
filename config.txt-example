@@ -14,3 +14,11 @@ C:\Users\Issa\projects\notes\inbox.txt
 C:\Users\Issa\projects\notes\ai-safety-inbox.txt
 C:\Users\Issa\projects\notes\questions.txt
 C:\Users\Issa\projects\notes\project-ideas.txt
+
+# The spaced_inbox.py script only cares about the content
+# of your notes; it does not care which file the note is
+# stored in. So if you move a note from one file to another,
+# the script will track that, but it won't think you created
+# a new note and deleted an existing note. To the script,
+# your whole collection might as well be stored in a single
+# giant file.
