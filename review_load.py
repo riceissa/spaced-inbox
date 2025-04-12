@@ -10,7 +10,7 @@ import sys
 
 conn = sqlite3.connect(sys.argv[1])
 cur = conn.cursor()
-data = cur.execute("select interval_anchor, interval, inbox_name from notes where interval >= 0")
+data = cur.execute("select last_reviewed_on, interval, filepath from notes where interval >= 0")
 
 names = set()
 
