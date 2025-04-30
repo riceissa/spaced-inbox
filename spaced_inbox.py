@@ -258,14 +258,14 @@ def main() -> None:
                 inbox_file = note.filepath
                 line_number = note.line_number_start
                 column_number = 1
-                line_fragment = initial_fragment(note.note_text)
+                line_fragment = initial_fragment(note.note_text).replace(':', '_')
                 print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
         if args.compile:
             for note in sorted(due_notes(notes_from_db), key=lambda n: (n.filepath, n.line_number_start)):
                 inbox_file = note.filepath
                 line_number = note.line_number_start
                 column_number = 1
-                line_fragment = initial_fragment(note.note_text)
+                line_fragment = initial_fragment(note.note_text).replace(':', '_')
                 print(f"{inbox_file}:{line_number}:{column_number}:{line_fragment}")
     else:
         # The following (i.e. not passing in any flags, the default action) is
