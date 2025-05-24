@@ -186,6 +186,58 @@ endfunction
 Now you can just call `:Roll` to do a review. This works from any file. You can
 remap `:Roll` to any keybinding to make it easier to do reviews.
 
+## Using the script from within Notepad++
+
+In the menu bar, go to Plugins -> Plugins Admin. In the search bar, search for
+"nppexec". Click the checkbox next to NppExec, then click on the Install button
+(which is located in the top right of the Plugins Admin window). After it is installed,
+close the Plugins Admin window (you may need to restart Notepad++, I don't remember).
+
+Now in the menu bar, go to Plugins -> NppExec -> Execute NppExec Script... . In the
+commands text field, enter:
+
+```
+NPP_SAVE
+cd C:\location\to\spaced-inbox\directory
+NPP_CONSOLE 1
+py.exe spaced_inbox.py -r
+NPP_MENUCOMMAND Plugins|NppExec|Go to next error
+```
+
+(For `py.exe`, you may need to use something like `python3` instead. The executable
+name is whatever you use in cmd to launch Python.)
+
+I don't quite remember how to do this on a fresh install, but somehow you either click
+the Save... button or you choose something in the dropdown that says `<temporary script>`
+to save the commands typed above as a named script. You can name it something like
+"spaced-inbox". Then when you press OK, it will run the commands typed above; a split window
+should appear at the bottom of the screen showing the output of `spaced_inbox.py`.
+
+Now in the menu go to Plugins -> NppExec -> Console Output Filters... . In the HighLight tab,
+in the first of the HighLight mask lines, check the check box, then in the text field enter
+the following:
+
+```
+%ABSFILE%:%LINE%:%CHAR%:*
+```
+
+(This tells NppExec for the pattern to look out for in the output of `spaced_inbox.py`.)
+
+In the Filter tab, check the box at the top that says "Enable Console Output Filter". Then
+press OK at the bottom of the window to close the window.
+
+Now in the menu go to Plugins -> NppExec -> Execute NppExec Script... . The commands text
+the we entered previously should still be there. Click the OK button to rerun the commands.
+In the output split window at the bottom, you should see the output of `spaced_inbox.py`, in
+particular a line that has a filename with a line number, column number, and some text from
+your note. (This will only be visible if you have notes that are due, so only after you've used
+the spaced inbox script for at least 50 days.) Now if you double click on this line, Notepad++
+should jump you to the note. This jumping is only possible because we added the filter pattern
+above.
+
+Our final task is to automate the running and the jumping so that your review session has a nice
+cadence.
+
 ## some helpful sql commands to poke around in the db
 
 To find the notes that will be due first:
