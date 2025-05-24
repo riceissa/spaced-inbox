@@ -232,11 +232,52 @@ In the output split window at the bottom, you should see the output of `spaced_i
 particular a line that has a filename with a line number, column number, and some text from
 your note. (This will only be visible if you have notes that are due, so only after you've used
 the spaced inbox script for at least 50 days.) Now if you double click on this line, Notepad++
-should jump you to the note. This jumping is only possible because we added the filter pattern
+should jump you to the note (it may have already jumped there, since our commands list above
+includes the line `NPP_MENUCOMMAND Plugins|NppExec|Go to next error`).
+This jumping is only possible because we added the filter pattern
 above.
 
 Our final task is to automate the running and the jumping so that your review session has a nice
 cadence.
+
+In the menu, go to Plugins -> NppExec -> Advanced Options... . In the Menu item section at the bottom
+left, in the Associated script dropdown, select spaced-inbox.  This should enter the text spaced-inbox
+in the Item name text field right above. Click the Add/Modify button. This will add "spaced-inbox :: spaced-inbox"
+to the Menu items * section at the top left. Make sure the checkbox that says "Place to the Macros submenu" is
+checked. Now click OK at the bottom of the window. Possibly after restarting Notepad++, you should
+now be able to run the spaced inbox script from the menu by going to Macro -> spaced-inbox. Don't worry,
+we will make this even simpler.
+
+Now in the menu, go to Settings -> Shortcut Mapper... .  Go to the Plugin commands tab. In the
+Filter textbox at the bottom, type spaced-inbox; as you type, the list of commands will be filtered
+and you should be left with just the spaced-inbox command. Now double click on the spaced-inbox command.
+A Shortcut window will pop up. Choose a shortcut that you want to use for running the spaced inbox
+command. For example, to do Ctrl+P as your shortcut, check the box that says CTRL, then pick P from
+the dropdown. Then click OK. There might be a warning that says something like "CONFLICT FOUND!" -- in this
+case, you can either pick a different shortcut, or you can remove the built-in shortcut (e.g. Ctrl+P in
+Notepad++ by default prints the file, which is not very useful, so you may choose to remove the printing
+shortcut). To remove a shortcut, note where the conflict is: when your cursor is on the spaced-inbox
+command, there should be a text window near the bottom that says something like
+"Main menu  |  22   Print...  ( Ctrl+P )" -- this is saying that the Print command from the Main menu
+tab is conflicting with the new spaced inbox shortcut. So go to the Main menu tab in this Shortcut
+mapper window, and in the Filter box at the bottom type "Print", then click on the Print command once,
+then click on the Clear button at the bottom. This will remove the shortcut to the Print command,
+and the Print command row should stop being red. You can now close the Shortcut mapper window.
+
+Now you should be able to just type Ctrl+P (or whatever shortcut you chose), which will run the
+spaced inbox command and will automatically jump to the note. It was a lot of work to get to
+this point, but now doing reviews becomes trivial.
+
+If you do not like having the script output in the split window at the bottom, you can press F6
+to open the command window to edit the spaced-inbox commands list, and add this line at the bottom:
+
+```
+NPP_MENUCOMMAND Plugins|NppExec|Show NppExec Console
+```
+
+Then press OK. ("Show NppExec Console" sounds like it's telling NppExec to _show_ the
+console split window, but actually that menu item acts more like a toggle so it's telling
+NppExec to _hide_ it, since we assume it was just showing after running the commands above.)
 
 ## some helpful sql commands to poke around in the db
 
