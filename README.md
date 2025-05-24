@@ -202,9 +202,8 @@ commands text field, enter:
 
 ```
 NPP_SAVE
-cd C:\location\to\spaced-inbox\directory
 NPP_CONSOLE 1
-py.exe spaced_inbox.py -r
+py.exe C:\location\to\spaced-inbox\directory\spaced_inbox.py -r
 NPP_MENUCOMMAND Plugins|NppExec|Go to next error
 ```
 
