@@ -69,7 +69,11 @@ The recommended way to use the script is from inside of a text editor using the
 `-r` flag. Many editors support parsing the output of the `-r` flag, allowing
 you to jump to the note that is due for review. I've added short guides for
 [Emacs](#using-the-script-from-within-emacs) and
-[Vim](#using-the-script-from-within-vim) so that you have an idea of how it works.
+[Vim](#using-the-script-from-within-vim) and
+[Notepad++](#using-the-script-from-within-notepad) so that you have an idea of how it works.
+Basically any text editor/IDE that allows you to compile programs from within the
+editor will work with spaced inbox (whimsically, you can think of the
+spaced inbox program as a "compiler for your thoughts").
 I plan to eventually create a GUI program so that you don't need to set
 everything up.
 
