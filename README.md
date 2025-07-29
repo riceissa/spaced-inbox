@@ -171,6 +171,30 @@ Restart Emacs. Now you should be able to just do `M-x roll` to do a
 single review. Of course, you can map this command to any key combination you
 want.
 
+### Alternative way in Emacs using the compile feature (not recommended)
+
+```elisp
+;; (setq compilation-auto-jump-to-first-error t)
+
+(defun roll ()
+  (interactive)
+  (compile "py.exe C:\\Users\\Issa\\projects\\spaced-inbox\\spaced_inbox.py -r")
+  (sleep-for 1)
+  ;; Unfortunately the following command doesn't work when run as part
+  ;; of a function because the compile command above runs async so the
+  ;; "*compilation*" window doesn't exist yet by the time the
+  ;; delete-window function gets called... Hence why we need to insert
+  ;; a sleep above to make sure the window exists. I can't believe the
+  ;; Emacs people didn't make it easy to just do a thing when the
+  ;; compile finishes; the only way to do this is to add a hook, which
+  ;; as far as I can tell can only be done globally, so now it runs
+  ;; for all compiles, not just within this function!
+  (next-error)
+  (delete-window (other-window-for-scrolling))
+  (recenter-top-bottom 0))
+```
+
+
 ## Using the script from within Vim
 
 Put the following in your vimrc:
